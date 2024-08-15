@@ -82,9 +82,11 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClInclude Include="source\include\NuEngine\Assertions.h" />
     <ClInclude Include="source\include\NuEngine\Engine.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="source\Assertions.cpp" />
     <ClCompile Include="source\Engine.cpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

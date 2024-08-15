@@ -1,3 +1,5 @@
 #pragma once
 
-class std::string fnEngine();
+#include <string>
+
+std::string fnEngine();

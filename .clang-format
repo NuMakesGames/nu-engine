@@ -69,7 +69,7 @@ KeepEmptyLinesAtTheStartOfBlocks: false
 LambdaBodyIndentation: Signature
 Language: Cpp
 MaxEmptyLinesToKeep: 1
-NamespaceIndentation: All
+NamespaceIndentation: Inner
 PackConstructorInitializers: CurrentLine
 PenaltyReturnTypeOnItsOwnLine: 1000
 PointerAlignment: Left
