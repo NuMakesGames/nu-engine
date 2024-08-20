@@ -54,10 +54,12 @@ IncludeCategories:
     Priority:        0
   - Regex:           '^<.*>'
     Priority:        2
-  - Regex:           '.*hpp'
+  - Regex:           '.*NuEngine.*'
     Priority:        3
-  - Regex:           '.*'
+  - Regex:           '.*h'
     Priority:        4
+  - Regex:           '.*'
+    Priority:        5
 IndentAccessModifiers: false
 IndentCaseBlocks: false
 IndentCaseLabels: true

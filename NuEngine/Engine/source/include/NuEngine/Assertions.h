@@ -22,7 +22,7 @@ namespace asserts
 } // namespace asserts
 } // namespace nu
 
-// Macro version that automatically echoes the assertion into the message
+// Macro version of ship assert that automatically echoes the condition into the message
 #define VerifyElseCrash(bAssert)                                                                       \
 	do                                                                                                 \
 	{                                                                                                  \

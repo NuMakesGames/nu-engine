@@ -83,11 +83,16 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClInclude Include="source\include\NuEngine\Assertions.h" />
+    <ClInclude Include="source\include\NuEngine\Console.h" />
+    <ClInclude Include="source\include\NuEngine\VirtualTerminalSequences.h" />
     <ClInclude Include="source\include\NuEngine\Engine.h" />
+    <ClInclude Include="source\include\NuEngine\ConsoleRenderer.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="source\Assertions.cpp" />
+    <ClCompile Include="source\Console.cpp" />
     <ClCompile Include="source\Engine.cpp" />
+    <ClCompile Include="source\ConsoleRenderer.cpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

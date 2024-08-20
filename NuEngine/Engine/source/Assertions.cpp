@@ -4,6 +4,8 @@
 #include <exception>
 #include <iostream>
 
+#include "NuEngine/VirtualTerminalSequences.h"
+
 namespace nu
 {
 namespace asserts
@@ -19,19 +21,13 @@ namespace asserts
 
 			assert(bAssert);
 
-			std::cerr << "\x1b[31m"
-					  << "Assertion failed"
-					  << "\x1b[37m"
-					  << ": "
-					  << "\x1b[91m" << condition << "\x1b[37m"
-					  << "\n  in "
-					  << "\x1b[36m" << loc.function_name() << "\x1b[37m"
-					  << "\n  at "
-					  << "\x1b[33m" << loc.file_name() << "\x1b[37m"
-					  << "("
-					  << "\x1b[33m" << loc.line() << "\x1b[37m"
-					  << ")"
-					  << "\x1b[0m" << '\n';
+			using namespace nu::console::vt;
+			std::cerr << color::ForegroundRed << "Assertion failed" << color::ForegroundWhite << ": "
+					  << color::ForegroundBrightRed << condition << color::ForegroundWhite << "\n  in "
+					  << color::ForegroundCyan << loc.function_name() << color::ForegroundWhite << "\n  at "
+					  << color::ForegroundYellow << loc.file_name() << color::ForegroundWhite << "("
+					  << color::ForegroundBrightYellow << loc.line() << color::ForegroundWhite << ")" << color::Default
+					  << '\n';
 
 			std::terminate();
 		}
