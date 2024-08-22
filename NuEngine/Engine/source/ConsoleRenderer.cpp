@@ -63,20 +63,42 @@ namespace console
 		// Update any positions on the console that have changed
 		// Don't send straight to std::cout to avoid the update being visibile in an inconsistent state
 		std::string builder;
+		int cursorX = 0;
+		int cursorY = 0;
+		std::string backgroundColor;
+		std::string foregroundColor;
 		for (int i = 0; i < backBuffer.size(); ++i)
 		{
 			const auto& backGlyph = backBuffer[i];
 			const auto& frontGlyph = frontBuffer[i];
-			if (backGlyph != frontGlyph || isFirstPresent)
+			if (backGlyph == frontGlyph && !isFirstPresent)
 			{
-				const int x = i % m_sizeX + 1;
-				const int y = i / m_sizeX + 1;
-
-				builder += vt::cursor::SetPosition(x, y);
-				builder += backGlyph.foregroundColor;
-				builder += backGlyph.backgroundColor;
-				builder += backGlyph.character;
+				continue;
 			}
+
+			const int x = i % m_sizeX + 1;
+			const int y = i / m_sizeX + 1;
+			if (cursorX != x || cursorY != y || i == 0)
+			{
+				builder += vt::cursor::SetPosition(x, y);
+				cursorX = x;
+				cursorY = y;
+			}
+
+			if (foregroundColor != backGlyph.foregroundColor || i == 0)
+			{
+				builder += backGlyph.foregroundColor;
+				foregroundColor = backGlyph.foregroundColor;
+			}
+
+			if (backgroundColor != backGlyph.backgroundColor || i == 0)
+			{
+				builder += backGlyph.backgroundColor;
+				backgroundColor = backGlyph.backgroundColor;
+			}
+
+			builder += backGlyph.character;
+			++cursorX;
 		}
 		isFirstPresent = false;
 
