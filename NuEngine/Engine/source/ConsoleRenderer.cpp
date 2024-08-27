@@ -16,7 +16,7 @@ namespace console
 		m_cachedConsoleState = CacheConsoleState();
 
 		VerifyElseCrash(EnableVirtualTerminalProcessing());
-		std::cout << vt::UseAlternateScreenBuffer;
+		std::cout << vt::UseAlternateScreenBuffer << vt::cursor::HideCursor;
 
 		auto [x, y] = GetConsoleScreenSize();
 		m_sizeX = x;
@@ -40,8 +40,8 @@ namespace console
 	}
 
 	void ConsoleRenderer::Draw(
-		uint8_t x,
-		uint8_t y,
+		uint16_t x,
+		uint16_t y,
 		char character,
 		std::string_view foregroundColor,
 		std::string_view backgroundColor)
@@ -51,6 +51,23 @@ namespace console
 		glyph.character = character;
 		glyph.foregroundColor = std::string(foregroundColor);
 		glyph.backgroundColor = std::string(backgroundColor);
+	}
+
+void ConsoleRenderer::Draw(
+		uint16_t x,
+		uint16_t y,
+		std::string_view text,
+		std::string_view foregroundColor,
+		std::string_view backgroundColor)
+	{
+		VerifyElseCrash(x < m_sizeX && y < m_sizeY);
+		for (uint16_t i = 0; i < text.size(); ++i)
+		{
+			if (x + i < m_sizeX)
+			{
+				Draw(x + i, y, text[i], foregroundColor, backgroundColor);
+			}
+		}
 	}
 
 	void ConsoleRenderer::Present()
@@ -122,7 +139,7 @@ namespace console
 	std::vector<ConsoleRenderer::Glyph>& ConsoleRenderer::GetFrontBuffer()
 	{
 		VerifyElseCrash(m_currentBufferIndex < m_buffers.size());
-		auto frontBufferIndex = (m_currentBufferIndex + 1) % m_buffers.size();
+		size_t frontBufferIndex = (m_currentBufferIndex + 1) % m_buffers.size();
 		return m_buffers[frontBufferIndex];
 	}
 } // namespace console

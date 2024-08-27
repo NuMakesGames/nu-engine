@@ -1,10 +1,6 @@
 ﻿#pragma once
 
-#include <format>
-#include <iostream>
-#include <ostream>
-#include <string>
-#include <string_view>
+#include <utility>
 
 namespace nu
 {
@@ -30,7 +26,7 @@ namespace console
 	void RestoreConsoleState(const CachedConsoleState& state);
 
 	// Returns the screen size of the console
-	std::pair<uint32_t, uint32_t> GetConsoleScreenSize();
+	std::pair<uint16_t, uint16_t> GetConsoleScreenSize();
 
 	// Attempts to enable virtual terminal processing on attached console
 	bool EnableVirtualTerminalProcessing();

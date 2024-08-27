@@ -2,7 +2,7 @@
 
 namespace nu
 {
-namespace profiling
+namespace engine
 {
 
 	Stopwatch::Stopwatch() : m_isRunning(false)
@@ -49,19 +49,19 @@ namespace profiling
 		m_startTime = std::chrono::high_resolution_clock::now();
 	}
 
-	auto Stopwatch::ElapsedDuration() const
+	 std::chrono::duration<double, std::milli> Stopwatch::ElapsedMilliseconds() const
 	{
-		return m_isRunning ? std::chrono::high_resolution_clock::now() - m_startTime : m_endTime - m_startTime;
-	}
+		return std::chrono::duration_cast<std::chrono::duration<double, std::milli>>(ElapsedDuration());
+	 }
 
-	std::chrono::milliseconds Stopwatch::ElapsedMilliseconds() const
+	std::chrono::duration<double> Stopwatch::ElapsedSeconds() const
 	{
-		return std::chrono::duration_cast<std::chrono::milliseconds>(ElapsedDuration());
+		return std::chrono::duration_cast<std::chrono::duration<double>>(ElapsedDuration());
 	}
 
 	bool Stopwatch::IsRunning() const
 	{
 		return m_isRunning;
 	}
-} // namespace profiling
+} // namespace engine
 } // namespace nu

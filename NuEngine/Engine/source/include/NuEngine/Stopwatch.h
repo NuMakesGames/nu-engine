@@ -4,7 +4,7 @@
 
 namespace nu
 {
-namespace profiling
+namespace engine
 {
 	class Stopwatch
 	{
@@ -24,10 +24,16 @@ namespace profiling
 		void Restart();
 
 		// Returns the elapsed time as a duration (for use with std::chrono::duration_cast)
-		auto ElapsedDuration() const;
+		auto ElapsedDuration() const
+		{
+			return m_isRunning ? std::chrono::high_resolution_clock::now() - m_startTime : m_endTime - m_startTime;
+		}
 
-		// Returns the elapsed time in milliseconds.
-		std::chrono::milliseconds ElapsedMilliseconds() const;
+		// Returns the elapsed time in milliseconds
+		std::chrono::duration<double, std::milli> ElapsedMilliseconds() const;
+
+		// Returns the elapsed time in seconds
+		std::chrono::duration<double> ElapsedSeconds() const;
 
 		// Checks if the stopwatch is running
 		bool IsRunning() const;

@@ -1,45 +1,73 @@
-#include <iostream>
-
-#include "NuEngine/Engine.h"
-#include "NuEngine/Assertions.h"
-#include "NuEngine/Console.h"
-#include "NuEngine/ConsoleRenderer.h"
-#include "NuEngine/Stopwatch.h"
-
-#include <thread>
 #include <chrono>
+#include <deque>
+#include <format>
+
+#include "NuEngine/ConsoleRenderer.h"
+#include "NuEngine/Engine.h"
+#include "NuEngine/VirtualTerminalSequences.h"
 
 using namespace nu::console;
-using namespace std::literals::chrono_literals;
+using namespace std::chrono_literals;
 
-int main()
+class Snake : public nu::engine::Game
 {
-	nu::profiling::Stopwatch sw;
-	std::vector<std::chrono::milliseconds> frameTimes{};
-	std::cout << "Starting simulation.\n";
-
-
-
+public:
+	Snake()
 	{
-		ConsoleRenderer renderer;
-		for (int i = 0; i < 20; ++i)
-		{
-			sw.Restart();
-			renderer.Clear();
-			renderer.Draw(i % 5, i, '*', vt::color::ForegroundBrightCyan);
-			renderer.Draw((i + 1) % 5, i, 'o', vt::color::ForegroundBrightGreen);
-			renderer.Present();
-			sw.Stop();
+	}
 
-			frameTimes.push_back(sw.ElapsedMilliseconds());
-			std::this_thread::sleep_for(20ms - sw.ElapsedMilliseconds());
+	void BeginPlay() override
+	{
+	}
+
+	void Tick(std::chrono::duration<double> deltaTime) override
+	{
+		m_totalTime += deltaTime;
+		if (m_frameTimes.size() >= 1)
+		{
+			m_frameTimes.pop_front();
+		}
+		m_frameTimes.push_back(deltaTime);
+		if (m_totalTime > 30s)
+		{
+			GetEngine()->StopGame();
 		}
 	}
 
-	for (const auto& frameTime : frameTimes)
+	void Render(nu::console::ConsoleRenderer& renderer) override
 	{
-		std::cout << frameTime << "\n";
+		int y = 0;
+		for (std::chrono::duration<double> frameTime : m_frameTimes)
+		{
+			renderer.Draw(
+				0,
+				y++,
+				std::format(
+					"Frame time: {:.3f}ms",
+					std::chrono::duration_cast<std::chrono::duration<double, std::milli>>(frameTime).count()),
+				// frameTime <= 16.667ms ? vt::color::ForegroundBrightGreen : vt::color::ForegroundBrightRed);
+				vt::color::ForegroundRGB(128, 50, 32));
+		}
 	}
 
-	fnEngine();
+	void EndPlay() override
+	{
+	}
+
+private:
+	// Delete copy/move construction and assignment
+	Snake(Snake&) = delete;
+	Snake(Snake&&) = delete;
+	Snake& operator=(Snake&) = delete;
+	Snake& operator=(Snake&&) = delete;
+
+	std::chrono::duration<double> m_totalTime;
+	std::deque<std::chrono::duration<double>> m_frameTimes;
+};
+
+int main()
+{
+	nu::engine::Engine engine;
+	Snake game;
+	engine.StartGame(game);
 }

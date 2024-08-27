@@ -26,9 +26,17 @@ namespace console
 
 		// Draws a character to the provided position
 		void Draw(
-			uint8_t x,
-			uint8_t y,
+			uint16_t x,
+			uint16_t y,
 			char character,
+			std::string_view foregroundColor = vt::color::ForegroundWhite,
+			std::string_view backgroundColor = vt::color::BackgroundBlack);
+
+		// Draws a string to the provided position
+		void Draw(
+			uint16_t x,
+			uint16_t y,
+			std::string_view text,
 			std::string_view foregroundColor = vt::color::ForegroundWhite,
 			std::string_view backgroundColor = vt::color::BackgroundBlack);
 
@@ -65,10 +73,10 @@ namespace console
 		bool isFirstPresent = true;
 
 		// Horizontal size
-		uint32_t m_sizeX;
+		uint16_t m_sizeX;
 
 		// Vertical size
-		uint32_t m_sizeY;
+		uint16_t m_sizeY;
 
 		// Buffers drawn to by Draw functions. Rendered to console on Present.
 		std::array<std::vector<Glyph>, 2> m_buffers;

@@ -52,7 +52,7 @@ namespace console
 		::SetConsoleCursorInfo(state.hOut, &cursorInfo);
 	}
 
-	std::pair<uint32_t, uint32_t> GetConsoleScreenSize()
+	std::pair<uint16_t, uint16_t> GetConsoleScreenSize()
 	{
 		HANDLE hOut = ::GetStdHandle(STD_OUTPUT_HANDLE);
 		if (hOut == INVALID_HANDLE_VALUE)
@@ -66,8 +66,8 @@ namespace console
 			return std::make_pair(0u, 0u);
 		}
 
-		uint32_t x = info.srWindow.Right - info.srWindow.Left + 1;
-		uint32_t y = info.srWindow.Bottom - info.srWindow.Top + 1;
+		uint16_t x = info.srWindow.Right - info.srWindow.Left + 1;
+		uint16_t y = info.srWindow.Bottom - info.srWindow.Top + 1;
 		return std::make_pair(x, y);
 	}
 
