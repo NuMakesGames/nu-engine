@@ -34,6 +34,8 @@ namespace console
 			state.dwCursorSize = cursorInfo.dwSize;
 		}
 
+		state.codePage = ::GetConsoleOutputCP();
+
 		return state;
 	}
 
@@ -50,6 +52,8 @@ namespace console
 		
 		CONSOLE_CURSOR_INFO cursorInfo{ .dwSize = state.dwCursorSize, .bVisible = state.bCursorVisible };
 		::SetConsoleCursorInfo(state.hOut, &cursorInfo);
+
+		::SetConsoleCP(state.codePage);
 	}
 
 	std::pair<uint16_t, uint16_t> GetConsoleScreenSize()
@@ -115,7 +119,7 @@ namespace console
 		//	return false;
 		//}
 
-		return true;
+		return ::SetConsoleOutputCP(CP_UTF8);
 	}
 
 } // namespace console

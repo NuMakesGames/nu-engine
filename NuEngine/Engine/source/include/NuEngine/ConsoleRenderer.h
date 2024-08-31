@@ -32,6 +32,15 @@ namespace console
 			std::string_view foregroundColor = vt::color::ForegroundWhite,
 			std::string_view backgroundColor = vt::color::BackgroundBlack);
 
+		// Draws a UTF-8 character to the provided position
+		// NOTE: Assumes that the u8string represents exactly one character
+		void Draw(
+			uint16_t x,
+			uint16_t y,
+			std::u8string_view character,
+			std::string_view foregroundColor = vt::color::ForegroundWhite,
+			std::string_view backgroundColor = vt::color::BackgroundBlack);
+
 		// Draws a string to the provided position
 		void Draw(
 			uint16_t x,
@@ -54,7 +63,7 @@ namespace console
 		// Stores character and color used to render a position in the console buffer
 		struct Glyph
 		{
-			char character = ' ';
+			std::u8string character = std::u8string{ ' ' };
 			std::string foregroundColor = std::string(vt::color::ForegroundWhite);
 			std::string backgroundColor = std::string(vt::color::BackgroundBlack);
 

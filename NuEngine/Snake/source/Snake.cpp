@@ -1,10 +1,14 @@
-#include <chrono>
+﻿#include <chrono>
 #include <deque>
 #include <format>
+#include <iostream>
+#include <string>
 
 #include "NuEngine/ConsoleRenderer.h"
 #include "NuEngine/Engine.h"
 #include "NuEngine/VirtualTerminalSequences.h"
+
+#include "Windows.h"
 
 using namespace nu::console;
 using namespace std::chrono_literals;
@@ -48,6 +52,7 @@ public:
 				// frameTime <= 16.667ms ? vt::color::ForegroundBrightGreen : vt::color::ForegroundBrightRed);
 				vt::color::ForegroundRGB(128, 50, 32));
 		}
+		renderer.Draw(0, 1, std::u8string{ u8"Ω" });
 	}
 
 	void EndPlay() override

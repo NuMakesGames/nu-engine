@@ -17,6 +17,7 @@ namespace console
 		unsigned short wTextAttributes = 0;
 		unsigned long dwCursorSize = 0;
 		bool bCursorVisible = true;
+		unsigned int codePage = 0;
 	};
 
 	// Retrieves current console configuration using Windows APIs.

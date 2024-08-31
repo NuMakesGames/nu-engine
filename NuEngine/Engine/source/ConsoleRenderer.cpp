@@ -47,13 +47,27 @@ namespace console
 		std::string_view backgroundColor)
 	{
 		VerifyElseCrash(x < m_sizeX && y < m_sizeY);
-		auto& glyph = GetBackBuffer()[y * m_sizeX + x];
+		Glyph& glyph = GetBackBuffer()[y * m_sizeX + x];
 		glyph.character = character;
 		glyph.foregroundColor = std::string(foregroundColor);
 		glyph.backgroundColor = std::string(backgroundColor);
 	}
 
-void ConsoleRenderer::Draw(
+	void ConsoleRenderer::Draw(
+		uint16_t x,
+		uint16_t y,
+		std::u8string_view character,
+		std::string_view foregroundColor,
+		std::string_view backgroundColor)
+	{
+		VerifyElseCrash(x < m_sizeX && y < m_sizeY);
+		Glyph& glyph = GetBackBuffer()[y * m_sizeX + x];
+		glyph.character = character;
+		glyph.foregroundColor = std::string(foregroundColor);
+		glyph.backgroundColor = std::string(backgroundColor);
+	}
+
+	void ConsoleRenderer::Draw(
 		uint16_t x,
 		uint16_t y,
 		std::string_view text,
@@ -79,7 +93,7 @@ void ConsoleRenderer::Draw(
 
 		// Update any positions on the console that have changed
 		// Don't send straight to std::cout to avoid the update being visibile in an inconsistent state
-		std::string builder;
+		std::u8string builder;
 		int cursorX = 0;
 		int cursorY = 0;
 		std::string backgroundColor;
@@ -97,20 +111,21 @@ void ConsoleRenderer::Draw(
 			const int y = i / m_sizeX + 1;
 			if (cursorX != x || cursorY != y || i == 0)
 			{
-				builder += vt::cursor::SetPosition(x, y);
+				std::string setCursorPosition = vt::cursor::SetPosition(x, y);
+				builder += std::u8string{ setCursorPosition.begin(), setCursorPosition.end() };
 				cursorX = x;
 				cursorY = y;
 			}
 
 			if (foregroundColor != backGlyph.foregroundColor || i == 0)
 			{
-				builder += backGlyph.foregroundColor;
+				builder += std::u8string{ backGlyph.foregroundColor.begin(), backGlyph.foregroundColor.end() };
 				foregroundColor = backGlyph.foregroundColor;
 			}
 
 			if (backgroundColor != backGlyph.backgroundColor || i == 0)
 			{
-				builder += backGlyph.backgroundColor;
+				builder += std::u8string{ backGlyph.backgroundColor.begin(), backGlyph.backgroundColor.end() };
 				backgroundColor = backGlyph.backgroundColor;
 			}
 
@@ -122,7 +137,7 @@ void ConsoleRenderer::Draw(
 		// Flush to make sure the console actually updates
 		if (!builder.empty())
 		{
-			std::cout << builder;
+			std::cout << std::string(builder.begin(), builder.end());
 			std::cout.flush();
 		}
 
