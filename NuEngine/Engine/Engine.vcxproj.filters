@@ -36,6 +36,9 @@
     <ClInclude Include="source\include\NuEngine\Game.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="source\include\NuEngine\ConsoleEventStream.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="source\Engine.cpp">
@@ -54,6 +57,9 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="source\Game.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="source\ConsoleEventStream.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>

@@ -1,6 +1,7 @@
 #include "NuEngine/Console.h"
 
 #define WIN32_LEAN_AND_MEAN
+#define NOMINMAX
 #include "Windows.h"
 
 namespace nu
@@ -17,7 +18,14 @@ namespace console
 			return state;
 		}
 
-		::GetConsoleMode(state.hOut, &state.dwMode);
+		state.hIn = ::GetStdHandle(STD_INPUT_HANDLE);
+		if (state.hIn == INVALID_HANDLE_VALUE)
+		{
+			return state;
+		}
+
+		::GetConsoleMode(state.hOut, &state.dwOutMode);
+		::GetConsoleMode(state.hIn, &state.dwInMode);
 
 		CONSOLE_SCREEN_BUFFER_INFO bufferInfo{ 0 };
 		if (::GetConsoleScreenBufferInfo(state.hOut, &bufferInfo))
@@ -41,15 +49,16 @@ namespace console
 
 	void RestoreConsoleState(const CachedConsoleState& state)
 	{
-		if (state.hOut == INVALID_HANDLE_VALUE)
+		if (state.hOut == INVALID_HANDLE_VALUE || state.hIn == INVALID_HANDLE_VALUE)
 		{
 			return;
 		}
 
-		::SetConsoleMode(state.hOut, state.dwMode);
+		::SetConsoleMode(state.hOut, state.dwOutMode);
+		::SetConsoleMode(state.hIn, state.dwInMode);
 		::SetConsoleCursorPosition(state.hOut, COORD{ state.cursorPositionX, state.cursorPositionY });
 		::SetConsoleTextAttribute(state.hOut, state.wTextAttributes);
-		
+
 		CONSOLE_CURSOR_INFO cursorInfo{ .dwSize = state.dwCursorSize, .bVisible = state.bCursorVisible };
 		::SetConsoleCursorInfo(state.hOut, &cursorInfo);
 
@@ -83,23 +92,11 @@ namespace console
 			return false;
 		}
 
-		// HANDLE hIn = ::GetStdHandle(STD_INPUT_HANDLE);
-		// if (hIn == INVALID_HANDLE_VALUE)
-		//{
-		//	return false;
-		// }
-
 		DWORD dwOriginalOutMode = 0;
 		if (!::GetConsoleMode(hOut, &dwOriginalOutMode))
 		{
 			return false;
 		}
-
-		// DWORD dwOriginalInMode = 0;
-		// if (!::GetConsoleMode(hIn, &dwOriginalInMode))
-		//{
-		//	return false;
-		// }
 
 		DWORD dwMode = dwOriginalOutMode | ENABLE_VIRTUAL_TERMINAL_PROCESSING | DISABLE_NEWLINE_AUTO_RETURN;
 		if (!::SetConsoleMode(hOut, dwMode) && ::GetLastError() == ERROR_INVALID_PARAMETER)
@@ -112,15 +109,25 @@ namespace console
 			}
 		}
 
-		// TODO: Explore if any scenarios with virtual input arise.
-		// DWORD dwInMode = dwOriginalInMode | ENABLE_VIRTUAL_TERMINAL_INPUT;
-		// if (!::SetConsoleMode(hIn, dwInMode))
-		//{
-		//	return false;
-		//}
-
 		return ::SetConsoleOutputCP(CP_UTF8);
 	}
 
+	bool EnableInputRecords()
+	{
+		HANDLE hIn = ::GetStdHandle(STD_INPUT_HANDLE);
+		if (hIn == INVALID_HANDLE_VALUE)
+		{
+			return false;
+		}
+
+		DWORD dwOriginalInMode = 0;
+		if (!::GetConsoleMode(hIn, &dwOriginalInMode))
+		{
+			return false;
+		}
+
+		DWORD dwInMode = dwOriginalInMode & ~(ENABLE_LINE_INPUT | ENABLE_ECHO_INPUT) | ENABLE_WINDOW_INPUT;
+		return ::SetConsoleMode(hIn, dwInMode);
+	}
 } // namespace console
 } // namespace nu

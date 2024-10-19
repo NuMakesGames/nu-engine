@@ -11,7 +11,9 @@ namespace console
 	struct CachedConsoleState
 	{
 		void* hOut = nullptr;
-		unsigned long dwMode = 0;
+		void* hIn = nullptr;
+		unsigned long dwOutMode = 0;
+		unsigned long dwInMode = 0;
 		short cursorPositionX = 0;
 		short cursorPositionY = 0;
 		unsigned short wTextAttributes = 0;
@@ -31,5 +33,10 @@ namespace console
 
 	// Attempts to enable virtual terminal processing on attached console
 	bool EnableVirtualTerminalProcessing();
+
+	// Attempts to configure the console for input records
+	// Disables standard input echo and line input processing
+	// Enables input records for window resize events
+	bool EnableInputRecords();
 } // namespace console
 } // namespace nu

@@ -3,6 +3,7 @@
 #include <chrono>
 #include <thread>
 
+#include "NuEngine/ConsoleEventStream.h"
 #include "NuEngine/ConsoleRenderer.h"
 #include "NuEngine/Game.h"
 #include "NuEngine/Stopwatch.h"
@@ -14,6 +15,34 @@ namespace nu
 {
 namespace engine
 {
+	class EscapeKeyConsumer : public IKeyboardInputConsumer
+	{
+	public:
+		EscapeKeyConsumer(Engine* engine)
+		{
+			m_engine = engine;
+		}
+
+		bool OnKeyDown(Key key)
+		{
+			if (key == Key::Escape)
+			{
+				m_engine->StopGame();
+				return true;
+			}
+
+			return false;
+		}
+
+		bool OnKeyUp(Key key)
+		{
+			return false;
+		}
+
+	private:
+		class Engine* m_engine;
+	};
+
 	Engine::Engine()
 	{
 	}
@@ -23,12 +52,19 @@ namespace engine
 		game.SetEngine(this);
 		game.BeginPlay();
 
+		EscapeKeyConsumer keyConsumer(this);
+		ConsoleEventStream eventStream;
+		eventStream.RegisterKeyboardInputConsumer(&keyConsumer);
+
 		Stopwatch frameTimer;
 		ConsoleRenderer renderer;
 		while (!m_shouldStopGame)
 		{
 			auto deltaTime = frameTimer.ElapsedSeconds();
 			frameTimer.Restart();
+
+			// Process input and window resize events
+			eventStream.ProcessEvents();
 
 			// Update the simulation
 			game.Tick(deltaTime);
@@ -51,6 +87,7 @@ namespace engine
 
 		game.EndPlay();
 		game.SetEngine(nullptr);
+		eventStream.UnregisterKeyboardInputConsumer(&keyConsumer);
 	}
 
 	void Engine::StopGame()

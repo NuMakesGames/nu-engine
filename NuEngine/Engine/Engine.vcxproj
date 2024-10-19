@@ -84,6 +84,7 @@
   <ItemGroup>
     <ClInclude Include="source\include\NuEngine\Assertions.h" />
     <ClInclude Include="source\include\NuEngine\Console.h" />
+    <ClInclude Include="source\include\NuEngine\ConsoleEventStream.h" />
     <ClInclude Include="source\include\NuEngine\Game.h" />
     <ClInclude Include="source\include\NuEngine\Stopwatch.h" />
     <ClInclude Include="source\include\NuEngine\VirtualTerminalSequences.h" />
@@ -93,6 +94,7 @@
   <ItemGroup>
     <ClCompile Include="source\Assertions.cpp" />
     <ClCompile Include="source\Console.cpp" />
+    <ClCompile Include="source\ConsoleEventStream.cpp" />
     <ClCompile Include="source\Engine.cpp" />
     <ClCompile Include="source\ConsoleRenderer.cpp" />
     <ClCompile Include="source\Game.cpp" />
