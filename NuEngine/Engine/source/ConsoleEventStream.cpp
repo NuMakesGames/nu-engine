@@ -27,7 +27,7 @@ namespace console
 
 	void ConsoleEventStream::ProcessEvents()
 	{
-		constexpr DWORD eventsPerLoop = 64;
+		constexpr DWORD eventsPerLoop = 512;
 		std::array<INPUT_RECORD, eventsPerLoop> inputRecords;
 
 		DWORD eventsToRead = 0;
@@ -35,37 +35,31 @@ namespace console
 		{
 			eventsToRead = std::min(eventsToRead, eventsPerLoop);
 			DWORD eventsRead = 0;
-			::ReadConsoleInput(m_cachedConsoleState.hIn, inputRecords.data(), eventsToRead, &eventsRead);
+			if (!::ReadConsoleInput(m_cachedConsoleState.hIn, inputRecords.data(), eventsToRead, &eventsRead))
+			{
+				break;
+			}
+
 			for (size_t i = 0; i < eventsRead; ++i)
 			{
 				switch (inputRecords[i].EventType)
 				{
 					case WINDOW_BUFFER_SIZE_EVENT:
 					{
-						// auto [x, y] = GetConsoleScreenSize();
-						// std::cout << vt::ClearScreen;
-						// std::cout << vt::MoveCursorTo(0, 0);
-						// std::cout << vt::SetCursorVisible(false);
-						// std::cout << vt::SetCursorSize(1);
-						// std::cout << vt::SetCursorPosition(0, 0);
-						// std::cout << vt::SetScreenSize(x, y);
+						const auto& resizeEvent = inputRecords[i].Event.WindowBufferSizeEvent;
+						uint16_t newWidth = resizeEvent.dwSize.X;
+						uint16_t newHeight = resizeEvent.dwSize.Y;
+
+						for (auto* consumer : m_resizeConsumers)
+						{
+							consumer->OnWindowResize(newWidth, newHeight);
+						}
 						break;
 					}
 					case KEY_EVENT:
 					{
 						const auto& keyEvent = inputRecords[i].Event.KeyEvent;
-						bool wasKeyMapped = true;
-						Key key = Key::Escape;
-						switch (keyEvent.wVirtualKeyCode)
-						{
-							case VK_ESCAPE:
-								key = Key::Escape;
-								break;
-							default:
-								wasKeyMapped = false;
-								break;
-						}
-
+						auto [wasKeyMapped, key] = TryMapKey(keyEvent.wVirtualKeyCode);
 						if (!wasKeyMapped)
 						{
 							break;
@@ -108,6 +102,111 @@ namespace console
 	void ConsoleEventStream::UnregisterKeyboardInputConsumer(IKeyboardInputConsumer* consumer)
 	{
 		std::erase(m_keyConsumers, consumer);
+	}
+
+	/*static*/ std::pair<bool, Key> ConsoleEventStream::TryMapKey(uint16_t virtualKeyCode)
+	{
+		switch (virtualKeyCode)
+		{
+			case VK_BACK:
+				return { true, Key::Backspace };
+			case VK_TAB:
+				return { true, Key::Tab };
+			case VK_RETURN:
+				return { true, Key::Enter };
+			case VK_SHIFT:
+				return { true, Key::Shift };
+			case VK_CONTROL:
+				return { true, Key::Control };
+			case VK_MENU:
+				return { true, Key::Alt };
+			case VK_ESCAPE:
+				return { true, Key::Escape };
+			case VK_SPACE:
+				return { true, Key::Space };
+			case VK_LEFT:
+				return { true, Key::Left };
+			case VK_UP:
+				return { true, Key::Up };
+			case VK_RIGHT:
+				return { true, Key::Right };
+			case VK_DOWN:
+				return { true, Key::Down };
+			case '0':
+				return { true, Key::Digit0 };
+			case '1':
+				return { true, Key::Digit1 };
+			case '2':
+				return { true, Key::Digit2 };
+			case '3':
+				return { true, Key::Digit3 };
+			case '4':
+				return { true, Key::Digit4 };
+			case '5':
+				return { true, Key::Digit5 };
+			case '6':
+				return { true, Key::Digit6 };
+			case '7':
+				return { true, Key::Digit7 };
+			case '8':
+				return { true, Key::Digit8 };
+			case '9':
+				return { true, Key::Digit9 };
+			case 'A':
+				return { true, Key::A };
+			case 'B':
+				return { true, Key::B };
+			case 'C':
+				return { true, Key::C };
+			case 'D':
+				return { true, Key::D };
+			case 'E':
+				return { true, Key::E };
+			case 'F':
+				return { true, Key::F };
+			case 'G':
+				return { true, Key::G };
+			case 'H':
+				return { true, Key::H };
+			case 'I':
+				return { true, Key::I };
+			case 'J':
+				return { true, Key::J };
+			case 'K':
+				return { true, Key::K };
+			case 'L':
+				return { true, Key::L };
+			case 'M':
+				return { true, Key::M };
+			case 'N':
+				return { true, Key::N };
+			case 'O':
+				return { true, Key::O };
+			case 'P':
+				return { true, Key::P };
+			case 'Q':
+				return { true, Key::Q };
+			case 'R':
+				return { true, Key::R };
+			case 'S':
+				return { true, Key::S };
+			case 'T':
+				return { true, Key::T };
+			case 'U':
+				return { true, Key::U };
+			case 'V':
+				return { true, Key::V };
+			case 'W':
+				return { true, Key::W };
+			case 'X':
+				return { true, Key::X };
+			case 'Y':
+				return { true, Key::Y };
+			case 'Z':
+				return { true, Key::Z };
+			default:
+				return { false, Key::Escape };
+		}
 	}
 } // namespace console
 } // namespace nu
