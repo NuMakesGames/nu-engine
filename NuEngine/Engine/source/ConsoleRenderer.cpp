@@ -166,8 +166,8 @@ namespace console
 		m_sizeY = desiredSizeY;
 		for (auto& buffer : m_buffers)
 		{
-			buffer.clear();
 			buffer.resize(m_sizeY * m_sizeX);
+			std::ranges::fill(buffer, Glyph{});
 		}
 
 		// Force a full redraw on the next present

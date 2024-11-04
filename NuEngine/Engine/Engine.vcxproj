@@ -59,6 +59,9 @@
       </SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
     </Link>
+    <Lib>
+      <AdditionalDependencies>winmm.lib</AdditionalDependencies>
+    </Lib>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <ClCompile>
@@ -80,6 +83,9 @@
       <OptimizeReferences>true</OptimizeReferences>
       <GenerateDebugInformation>true</GenerateDebugInformation>
     </Link>
+    <Lib>
+      <AdditionalDependencies>winmm.lib</AdditionalDependencies>
+    </Lib>
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClInclude Include="source\include\NuEngine\Assertions.h" />

@@ -9,6 +9,9 @@
 #include "NuEngine/Game.h"
 #include "NuEngine/Stopwatch.h"
 
+#define NOMINMAX
+#include "Windows.h"
+
 using namespace nu::console;
 using namespace std::chrono_literals;
 
@@ -56,7 +59,7 @@ namespace engine
 
 		void OnWindowResize(uint16_t x, uint16_t y)
 		{
-			m_engine->SetDesiredRenderSize(x, y);
+			m_engine->SetDesiredRendererSize(x, y);
 		}
 
 	private:
@@ -69,6 +72,13 @@ namespace engine
 
 	void Engine::StartGame(Game& game)
 	{
+		// Set the timer precision to 1ms during play
+		::timeBeginPeriod(1);
+
+		ConsoleRenderer renderer;
+		m_renderSizeX = renderer.GetWidth();
+		m_renderSizeY = renderer.GetHeight();
+
 		game.SetEngine(this);
 		game.BeginPlay();
 
@@ -77,12 +87,14 @@ namespace engine
 		ConsoleEventStream eventStream;
 		eventStream.RegisterKeyboardInputConsumer(&keyConsumer);
 		eventStream.RegisterWindowResizeConsumer(&resizeConsumer);
-
-		ConsoleRenderer renderer;
-		m_renderSizeX = renderer.GetWidth();
-		m_renderSizeY = renderer.GetHeight();
+		eventStream.RegisterKeyboardInputConsumer(&game);
+		eventStream.RegisterWindowResizeConsumer(&game);
 
 		Stopwatch frameTimer;
+		Stopwatch tickTimer;
+		Stopwatch renderTimer;
+		Stopwatch presentTimer;
+		Stopwatch idleTimer;
 		while (!m_shouldStopGame)
 		{
 			auto deltaTime = frameTimer.ElapsedSeconds();
@@ -98,29 +110,58 @@ namespace engine
 			}
 
 			// Update the simulation
+			tickTimer.Restart();
 			game.Tick(deltaTime);
+			tickTimer.Stop();
 
-			// Render the frame
+			// Draw the game
+			renderTimer.Restart();
 			renderer.Clear();
 			game.Render(renderer);
+			renderTimer.Stop();
+
+			// Present to the console
+			presentTimer.Restart();
 			renderer.Present();
+			presentTimer.Stop();
 
-			// Busy wait until the next frame
-			constexpr int targetFramesPerSecond = 60;
-			constexpr double targetFrameTime = 1.f / targetFramesPerSecond;
-			while (targetFrameTime > frameTimer.ElapsedSeconds().count())
+			// Idle until the next frame. Sleep until within 1.5 ms, then yield until within 0.1 ms, then busy-wait.
+			idleTimer.Restart();
+			auto targetFrameTime =
+				std::chrono::microseconds(static_cast<int>(1.f / m_targetFramesPerSecond * 1'000'000));
+			while (targetFrameTime > frameTimer.ElapsedDuration())
 			{
-				// Spin as sleep functions do not have necessary precision (~15ms on Windows)
+				auto remainingTime = targetFrameTime - frameTimer.ElapsedMilliseconds();
+				constexpr auto spinThreshold = 1.5ms;
+				constexpr auto yieldThreshold = 0.1ms;
+				if (remainingTime > spinThreshold)
+				{
+					std::this_thread::sleep_for(remainingTime - spinThreshold);
+				}
+				else if (remainingTime > yieldThreshold)
+				{
+					std::this_thread::yield();
+				}
 			}
-
+			idleTimer.Stop();
 			frameTimer.Stop();
+
+			m_lastFrameTime = frameTimer.ElapsedSeconds();
+			m_lastTickTime = tickTimer.ElapsedSeconds();
+			m_lastRenderTime = renderTimer.ElapsedSeconds();
+			m_lastPresentTime = presentTimer.ElapsedSeconds();
+			m_lastIdleTime = idleTimer.ElapsedSeconds();
 		}
 
 		game.EndPlay();
 		game.SetEngine(nullptr);
+		eventStream.UnregisterWindowResizeConsumer(&game);
+		eventStream.UnregisterKeyboardInputConsumer(&game);
 		eventStream.UnregisterWindowResizeConsumer(&resizeConsumer);
 		eventStream.UnregisterKeyboardInputConsumer(&keyConsumer);
 
+		// Reset the timer precision to the default
+		::timeEndPeriod(1);
 	}
 
 	void Engine::StopGame()
@@ -128,7 +169,7 @@ namespace engine
 		m_shouldStopGame = true;
 	}
 
-	void Engine::SetDesiredRenderSize(uint16_t x, uint16_t y) noexcept
+	void Engine::SetDesiredRendererSize(uint16_t x, uint16_t y) noexcept
 	{
 		m_renderSizeX = x;
 		m_renderSizeY = y;

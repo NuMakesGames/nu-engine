@@ -2,6 +2,7 @@
 
 #include <chrono>
 
+#include "NuEngine/ConsoleEventStream.h"
 #include "NuEngine/ConsoleRenderer.h"
 
 namespace nu
@@ -9,7 +10,7 @@ namespace nu
 namespace engine
 {
 	// Interface for games run by the engine
-	class Game
+	class Game : nu::console::IKeyboardInputConsumer, nu::console::IWindowResizeConsumer
 	{
 	public:
 		Game();
@@ -25,6 +26,23 @@ namespace engine
 
 		// Called each frame to render the game
 		virtual void Render(nu::console::ConsoleRenderer& renderer) = 0;
+
+		// Optional callback when key is pressed
+		virtual bool OnKeyDown(nu::console::Key key)
+		{
+			return false;
+		}
+
+		// Optional callback when key is released
+		virtual bool OnKeyUp(nu::console::Key key)
+		{
+			return false;
+		}
+
+		// Optional callback when the window is resized
+		virtual void OnWindowResize(uint16_t width, uint16_t height)
+		{
+		}
 
 	protected:
 		// Non-null when the game is being run by the engine
