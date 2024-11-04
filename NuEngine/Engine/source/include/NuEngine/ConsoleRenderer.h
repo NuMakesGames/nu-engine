@@ -25,7 +25,7 @@ namespace console
 		void Clear();
 
 		// Draws a character to the provided position
-		void Draw(
+		bool Draw(
 			uint16_t x,
 			uint16_t y,
 			char character,
@@ -34,7 +34,7 @@ namespace console
 
 		// Draws a UTF-8 character to the provided position
 		// NOTE: Assumes that the u8string represents exactly one character
-		void Draw(
+		bool Draw(
 			uint16_t x,
 			uint16_t y,
 			std::u8string_view character,
@@ -42,7 +42,7 @@ namespace console
 			std::string_view backgroundColor = vt::color::BackgroundBlack);
 
 		// Draws a string to the provided position
-		void Draw(
+		bool Draw(
 			uint16_t x,
 			uint16_t y,
 			std::string_view text,
@@ -51,6 +51,21 @@ namespace console
 
 		// Renders the current buffer to the console
 		void Present();
+
+		// Resizes the renderer to the desired width and height
+		void Resize(uint16_t sizeX, uint16_t sizeY);
+
+		// Returns the current width of the renderer
+		uint16_t GetWidth() const noexcept
+		{
+			return m_sizeX;
+		}
+
+		// Returns the current height of the renderer
+		uint16_t GetHeight() const noexcept
+		{
+			return m_sizeY;
+		};
 
 		// Delete copy/move construction and assignment
 	private:
@@ -78,8 +93,8 @@ namespace console
 		std::vector<Glyph>& GetFrontBuffer();
 
 	private:
-		// False after first call to present
-		bool isFirstPresent = true;
+		// True if the buffers were resized since last present
+		bool m_shouldDrawAllGlyphs = true;
 
 		// Horizontal size
 		uint16_t m_sizeX;

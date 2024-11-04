@@ -104,6 +104,16 @@ namespace console
 		std::erase(m_keyConsumers, consumer);
 	}
 
+	void ConsoleEventStream::RegisterWindowResizeConsumer(IWindowResizeConsumer* consumer)
+	{
+		m_resizeConsumers.emplace_back(consumer);
+	}
+
+	void ConsoleEventStream::UnregisterWindowResizeConsumer(IWindowResizeConsumer* consumer)
+	{
+		std::erase(m_resizeConsumers, consumer);
+	}
+
 	/*static*/ std::pair<bool, Key> ConsoleEventStream::TryMapKey(uint16_t virtualKeyCode)
 	{
 		switch (virtualKeyCode)

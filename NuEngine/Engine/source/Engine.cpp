@@ -3,6 +3,7 @@
 #include <chrono>
 #include <thread>
 
+#include "NuEngine/Assertions.h"
 #include "NuEngine/ConsoleEventStream.h"
 #include "NuEngine/ConsoleRenderer.h"
 #include "NuEngine/Game.h"
@@ -20,6 +21,7 @@ namespace engine
 	public:
 		EscapeKeyConsumer(Engine* engine)
 		{
+			VerifyElseCrash(engine != nullptr);
 			m_engine = engine;
 		}
 
@@ -43,6 +45,24 @@ namespace engine
 		class Engine* m_engine;
 	};
 
+	class WindowResizeConsumer : public IWindowResizeConsumer
+	{
+	public:
+		WindowResizeConsumer(Engine* engine)
+		{
+			VerifyElseCrash(engine != nullptr);
+			m_engine = engine;
+		}
+
+		void OnWindowResize(uint16_t x, uint16_t y)
+		{
+			m_engine->SetDesiredRenderSize(x, y);
+		}
+
+	private:
+		class Engine* m_engine;
+	};
+
 	Engine::Engine()
 	{
 	}
@@ -53,11 +73,16 @@ namespace engine
 		game.BeginPlay();
 
 		EscapeKeyConsumer keyConsumer(this);
+		WindowResizeConsumer resizeConsumer(this);
 		ConsoleEventStream eventStream;
 		eventStream.RegisterKeyboardInputConsumer(&keyConsumer);
+		eventStream.RegisterWindowResizeConsumer(&resizeConsumer);
+
+		ConsoleRenderer renderer;
+		m_renderSizeX = renderer.GetWidth();
+		m_renderSizeY = renderer.GetHeight();
 
 		Stopwatch frameTimer;
-		ConsoleRenderer renderer;
 		while (!m_shouldStopGame)
 		{
 			auto deltaTime = frameTimer.ElapsedSeconds();
@@ -65,6 +90,12 @@ namespace engine
 
 			// Process input and window resize events
 			eventStream.ProcessEvents();
+
+			// Resize the renderer if necessary
+			if (renderer.GetWidth() != m_renderSizeX || renderer.GetHeight() != m_renderSizeY)
+			{
+				renderer.Resize(m_renderSizeX, m_renderSizeY);
+			}
 
 			// Update the simulation
 			game.Tick(deltaTime);
@@ -87,12 +118,20 @@ namespace engine
 
 		game.EndPlay();
 		game.SetEngine(nullptr);
+		eventStream.UnregisterWindowResizeConsumer(&resizeConsumer);
 		eventStream.UnregisterKeyboardInputConsumer(&keyConsumer);
+
 	}
 
 	void Engine::StopGame()
 	{
 		m_shouldStopGame = true;
+	}
+
+	void Engine::SetDesiredRenderSize(uint16_t x, uint16_t y) noexcept
+	{
+		m_renderSizeX = x;
+		m_renderSizeY = y;
 	}
 } // namespace engine
 } // namespace nu

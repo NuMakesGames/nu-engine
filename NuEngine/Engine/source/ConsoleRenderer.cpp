@@ -19,13 +19,7 @@ namespace console
 		std::cout << vt::UseAlternateScreenBuffer << vt::cursor::HideCursor;
 
 		auto [x, y] = GetConsoleScreenSize();
-		m_sizeX = x;
-		m_sizeY = y;
-
-		for (auto& buffer : m_buffers)
-		{
-			buffer.resize(y * x);
-		}
+		Resize(x, y);
 	}
 
 	ConsoleRenderer::~ConsoleRenderer()
@@ -39,49 +33,65 @@ namespace console
 		std::ranges::fill(GetBackBuffer(), Glyph{});
 	}
 
-	void ConsoleRenderer::Draw(
+	bool ConsoleRenderer::Draw(
 		uint16_t x,
 		uint16_t y,
 		char character,
 		std::string_view foregroundColor,
 		std::string_view backgroundColor)
 	{
-		VerifyElseCrash(x < m_sizeX && y < m_sizeY);
+		if (x >= m_sizeX || y >= m_sizeY)
+		{
+			return false;
+		}
+
 		Glyph& glyph = GetBackBuffer()[y * m_sizeX + x];
 		glyph.character = character;
 		glyph.foregroundColor = std::string(foregroundColor);
 		glyph.backgroundColor = std::string(backgroundColor);
+		return true;
 	}
 
-	void ConsoleRenderer::Draw(
+	bool ConsoleRenderer::Draw(
 		uint16_t x,
 		uint16_t y,
 		std::u8string_view character,
 		std::string_view foregroundColor,
 		std::string_view backgroundColor)
 	{
-		VerifyElseCrash(x < m_sizeX && y < m_sizeY);
+		if (x >= m_sizeX || y >= m_sizeY)
+		{
+			return false;
+		}
+
 		Glyph& glyph = GetBackBuffer()[y * m_sizeX + x];
 		glyph.character = character;
 		glyph.foregroundColor = std::string(foregroundColor);
 		glyph.backgroundColor = std::string(backgroundColor);
+		return true;
 	}
 
-	void ConsoleRenderer::Draw(
+	bool ConsoleRenderer::Draw(
 		uint16_t x,
 		uint16_t y,
 		std::string_view text,
 		std::string_view foregroundColor,
 		std::string_view backgroundColor)
 	{
-		VerifyElseCrash(x < m_sizeX && y < m_sizeY);
+		if (x >= m_sizeX || y >= m_sizeY)
+		{
+			return false;
+		}
+
+		bool result = true;
 		for (uint16_t i = 0; i < text.size(); ++i)
 		{
 			if (x + i < m_sizeX)
 			{
-				Draw(x + i, y, text[i], foregroundColor, backgroundColor);
+				result &= Draw(x + i, y, text[i], foregroundColor, backgroundColor);
 			}
 		}
+		return result;
 	}
 
 	void ConsoleRenderer::Present()
@@ -102,7 +112,7 @@ namespace console
 		{
 			const auto& backGlyph = backBuffer[i];
 			const auto& frontGlyph = frontBuffer[i];
-			if (backGlyph == frontGlyph && !isFirstPresent)
+			if (backGlyph == frontGlyph && !m_shouldDrawAllGlyphs)
 			{
 				continue;
 			}
@@ -132,7 +142,7 @@ namespace console
 			builder += backGlyph.character;
 			++cursorX;
 		}
-		isFirstPresent = false;
+		m_shouldDrawAllGlyphs = false;
 
 		// Flush to make sure the console actually updates
 		if (!builder.empty())
@@ -143,6 +153,25 @@ namespace console
 
 		// Flip the buffers for next frame
 		m_currentBufferIndex = (m_currentBufferIndex + 1) % m_buffers.size();
+	}
+
+	void ConsoleRenderer::Resize(uint16_t desiredSizeX, uint16_t desiredSizeY)
+	{
+		if (desiredSizeX == m_sizeX && desiredSizeY == m_sizeY)
+		{
+			return;
+		}
+
+		m_sizeX = desiredSizeX;
+		m_sizeY = desiredSizeY;
+		for (auto& buffer : m_buffers)
+		{
+			buffer.clear();
+			buffer.resize(m_sizeY * m_sizeX);
+		}
+
+		// Force a full redraw on the next present
+		m_shouldDrawAllGlyphs = true;
 	}
 
 	std::vector<ConsoleRenderer::Glyph>& ConsoleRenderer::GetBackBuffer()
