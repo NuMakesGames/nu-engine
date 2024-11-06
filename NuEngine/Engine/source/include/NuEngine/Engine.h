@@ -1,12 +1,13 @@
 #pragma once
 
 #include "NuEngine/Game.h"
+#include "NuEngine/ConsoleEventStream.h"
 
 namespace nu
 {
 namespace engine
 {
-	class Engine
+	class Engine : private nu::console::IKeyboardInputConsumer, private nu::console::IWindowResizeConsumer
 	{
 	public:
 		Engine();
@@ -16,6 +17,18 @@ namespace engine
 
 		// Shuts down the engine; call during exit
 		void StopGame();
+
+		// Callback for IWindowResizeConsumer when the window is resized
+		virtual void OnWindowResize(uint16_t x, uint16_t y);
+
+		// Callback for IKeyboardInputConsumer when a key is pressed
+		virtual bool OnKeyDown(nu::console::Key key);
+
+		// Callback for IKeyboardInputConsumer when a key is released
+		virtual bool OnKeyUp(nu::console::Key key);
+
+		// Desired size for the renderer; called when the window is resized
+		void SetDesiredRendererSize(uint16_t x, uint16_t y) noexcept;
 
 		// Returns the current renderer size
 		std::pair<uint16_t, uint16_t> GetRendererSize() const noexcept
@@ -29,25 +42,22 @@ namespace engine
 			return m_renderSizeX;
 		}
 
+		// Sets the target frames per second
+		void SetTargetFramesPerSecond(uint16_t targetFramesPerSecond)
+		{
+			m_targetFramesPerSecond = targetFramesPerSecond;
+		}
+
 		// Returns the current renderer height
 		uint16_t GetRendererHeight() const noexcept
 		{
 			return m_renderSizeY;
 		}
 
-		// Desired size for the renderer; called when the window is resized
-		void SetDesiredRendererSize(uint16_t x, uint16_t y) noexcept;
-
 		// Gets the current target frames per second
 		uint16_t GetTargetFramesPerSecond() const noexcept
 		{
 			return m_targetFramesPerSecond;
-		}
-
-		// Sets the target frames per second
-		void SetTargetFramesPerSecond(uint16_t targetFramesPerSecond)
-		{
-			m_targetFramesPerSecond = targetFramesPerSecond;
 		}
 
 		// Returns the total frame time of the last frame
@@ -118,6 +128,7 @@ namespace engine
 		Engine& operator=(Engine&&) = delete;
 
 	private:
+		Game* m_game = nullptr;
 		bool m_shouldStopGame = false;
 		uint16_t m_renderSizeX = 0;
 		uint16_t m_renderSizeY = 0;

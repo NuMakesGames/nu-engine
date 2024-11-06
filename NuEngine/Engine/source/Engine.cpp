@@ -19,53 +19,6 @@ namespace nu
 {
 namespace engine
 {
-	class EscapeKeyConsumer : public IKeyboardInputConsumer
-	{
-	public:
-		EscapeKeyConsumer(Engine* engine)
-		{
-			VerifyElseCrash(engine != nullptr);
-			m_engine = engine;
-		}
-
-		bool OnKeyDown(Key key)
-		{
-			if (key == Key::Escape)
-			{
-				m_engine->StopGame();
-				return true;
-			}
-
-			return false;
-		}
-
-		bool OnKeyUp(Key key)
-		{
-			return false;
-		}
-
-	private:
-		class Engine* m_engine;
-	};
-
-	class WindowResizeConsumer : public IWindowResizeConsumer
-	{
-	public:
-		WindowResizeConsumer(Engine* engine)
-		{
-			VerifyElseCrash(engine != nullptr);
-			m_engine = engine;
-		}
-
-		void OnWindowResize(uint16_t x, uint16_t y)
-		{
-			m_engine->SetDesiredRendererSize(x, y);
-		}
-
-	private:
-		class Engine* m_engine;
-	};
-
 	Engine::Engine()
 	{
 	}
@@ -79,16 +32,13 @@ namespace engine
 		m_renderSizeX = renderer.GetWidth();
 		m_renderSizeY = renderer.GetHeight();
 
+		m_game = &game;
 		game.SetEngine(this);
 		game.BeginPlay();
 
-		EscapeKeyConsumer keyConsumer(this);
-		WindowResizeConsumer resizeConsumer(this);
 		ConsoleEventStream eventStream;
-		eventStream.RegisterKeyboardInputConsumer(&keyConsumer);
-		eventStream.RegisterWindowResizeConsumer(&resizeConsumer);
-		eventStream.RegisterKeyboardInputConsumer(&game);
-		eventStream.RegisterWindowResizeConsumer(&game);
+		eventStream.RegisterKeyboardInputConsumer(this);
+		eventStream.RegisterWindowResizeConsumer(this);
 
 		Stopwatch frameTimer;
 		Stopwatch tickTimer;
@@ -107,6 +57,7 @@ namespace engine
 			if (renderer.GetWidth() != m_renderSizeX || renderer.GetHeight() != m_renderSizeY)
 			{
 				renderer.Resize(m_renderSizeX, m_renderSizeY);
+				m_game->OnWindowResize(m_renderSizeX, m_renderSizeY);
 			}
 
 			// Update the simulation
@@ -155,10 +106,10 @@ namespace engine
 
 		game.EndPlay();
 		game.SetEngine(nullptr);
-		eventStream.UnregisterWindowResizeConsumer(&game);
-		eventStream.UnregisterKeyboardInputConsumer(&game);
-		eventStream.UnregisterWindowResizeConsumer(&resizeConsumer);
-		eventStream.UnregisterKeyboardInputConsumer(&keyConsumer);
+		m_game = nullptr;
+
+		eventStream.UnregisterWindowResizeConsumer(this);
+		eventStream.UnregisterKeyboardInputConsumer(this);
 
 		// Reset the timer precision to the default
 		::timeEndPeriod(1);
@@ -167,6 +118,32 @@ namespace engine
 	void Engine::StopGame()
 	{
 		m_shouldStopGame = true;
+	}
+
+	void Engine::OnWindowResize(uint16_t x, uint16_t y)
+	{
+		SetDesiredRendererSize(x, y);
+	}
+
+	bool Engine::OnKeyDown(Key key)
+	{
+		if (m_game->OnKeyDown(key))
+		{
+			return true;
+		}
+
+		if (key == Key::Escape)
+		{
+			StopGame();
+			return true;
+		}
+
+		return false;
+	}
+
+	bool Engine::OnKeyUp(Key key)
+	{
+		return m_game->OnKeyUp(key);
 	}
 
 	void Engine::SetDesiredRendererSize(uint16_t x, uint16_t y) noexcept

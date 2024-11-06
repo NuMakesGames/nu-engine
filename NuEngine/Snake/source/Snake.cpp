@@ -93,6 +93,7 @@ public:
 	void Tick(std::chrono::duration<double> deltaTime) override
 	{
 		m_x += m_currentMovement;
+		m_x = std::clamp(m_x, 0, static_cast<int>(m_snowflakes.size() - 1));
 
 		// Move all snowflakes forward
 		for (auto& snowflake : m_snowflakes)
@@ -185,7 +186,7 @@ private:
 		std::chrono::milliseconds accruedTime;
 	};
 
-	uint16_t m_x;
+	int m_x;
 	int m_currentMovement = 0;
 	std::vector<Snowflake> m_snowflakes;
 
