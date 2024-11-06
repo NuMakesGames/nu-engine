@@ -47,7 +47,7 @@ namespace console
 		return state;
 	}
 
-	void RestoreConsoleState(const CachedConsoleState& state)
+	void RestoreConsoleState(const CachedConsoleState& state, bool shouldRestorePosition)
 	{
 		if (state.hOut == INVALID_HANDLE_VALUE || state.hIn == INVALID_HANDLE_VALUE)
 		{
@@ -56,7 +56,10 @@ namespace console
 
 		::SetConsoleMode(state.hOut, state.dwOutMode);
 		::SetConsoleMode(state.hIn, state.dwInMode);
-		::SetConsoleCursorPosition(state.hOut, COORD{ state.cursorPositionX, state.cursorPositionY });
+		if (shouldRestorePosition)
+		{
+			::SetConsoleCursorPosition(state.hOut, COORD{ state.cursorPositionX, state.cursorPositionY });
+		}
 		::SetConsoleTextAttribute(state.hOut, state.wTextAttributes);
 
 		CONSOLE_CURSOR_INFO cursorInfo{ .dwSize = state.dwCursorSize, .bVisible = state.bCursorVisible };

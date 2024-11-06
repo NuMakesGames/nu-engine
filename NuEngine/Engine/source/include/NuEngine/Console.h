@@ -26,7 +26,7 @@ namespace console
 	CachedConsoleState CacheConsoleState();
 
 	// Restores console configuration.
-	void RestoreConsoleState(const CachedConsoleState& state);
+	void RestoreConsoleState(const CachedConsoleState& state, bool shouldRestorePosition = true);
 
 	// Returns the screen size of the console
 	std::pair<uint16_t, uint16_t> GetConsoleScreenSize();
