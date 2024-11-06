@@ -1,11 +1,14 @@
 #include "NuEngine/ConsoleRenderer.h"
 
 #include <algorithm>
+#include <chrono>
 #include <iostream>
 #include <sstream>
 
 #include "NuEngine/Assertions.h"
 #include "NuEngine/Console.h"
+
+using namespace std::chrono_literals;
 
 namespace nu
 {
@@ -97,8 +100,8 @@ namespace console
 	void ConsoleRenderer::Present()
 	{
 		// Get references to the buffers
-		const auto& backBuffer = GetBackBuffer();
-		const auto& frontBuffer = GetFrontBuffer();
+		auto& backBuffer = GetBackBuffer();
+		auto& frontBuffer = GetFrontBuffer();
 		VerifyElseCrash(backBuffer.size() == frontBuffer.size());
 
 		// Update any positions on the console that have changed
@@ -149,6 +152,12 @@ namespace console
 		{
 			std::cout << std::string(builder.begin(), builder.end());
 			std::cout.flush();
+		}
+
+		if (m_enableIncrementalDrawing)
+		{
+			// Copy the front buffer to the back buffer if incremental drawing is enabled
+			backBuffer = frontBuffer;
 		}
 
 		// Flip the buffers for next frame

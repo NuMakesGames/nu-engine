@@ -67,6 +67,20 @@ namespace console
 			return m_sizeY;
 		};
 
+		// Whether incremental drawing is enabled. When enabled, Present will copy the front buffer to the back buffer.
+		bool IsIncrementalDrawingEnabled() const noexcept
+		{
+			return m_enableIncrementalDrawing;
+		}
+
+		// Enables or disables incremental drawing. Enable to preserve draw calls across Present calls at a small
+		// performance cost. Only enable if you do not intend to redraw every frame (i.e. you aren't clearing and
+		// drawing in full every frame).
+		void SetIncrementalDrawingEnabled(bool enableIncrementalDrawing) noexcept
+		{
+			m_enableIncrementalDrawing = enableIncrementalDrawing;
+		}
+
 		// Delete copy/move construction and assignment
 	private:
 		ConsoleRenderer(ConsoleRenderer&) = delete;
@@ -95,6 +109,9 @@ namespace console
 	private:
 		// True if the buffers were resized since last present
 		bool m_shouldDrawAllGlyphs = true;
+
+		// True if the front buffer should be copied to the back buffer after Present
+		bool m_enableIncrementalDrawing = false;
 
 		// Horizontal size
 		uint16_t m_sizeX;
