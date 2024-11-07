@@ -28,29 +28,112 @@ namespace console
 		void Clear();
 
 		// Draws a character to the provided position
-		bool Draw(
+		bool DrawChar(
 			uint16_t x,
 			uint16_t y,
 			char character,
 			std::string_view foregroundColor = vt::color::ForegroundWhite,
 			std::string_view backgroundColor = vt::color::BackgroundBlack);
 
+		// Draws a character to the provided position
+		template<typename T>
+		bool DrawChar(
+			T&& position,
+			char character,
+			std::string_view foregroundColor = vt::color::ForegroundWhite,
+			std::string_view backgroundColor = vt::color::BackgroundBlack)
+		{
+			return DrawChar(position.x, position.y, character, foregroundColor, backgroundColor);
+		}
+
+		// Draws a character to the provided positions
+		template<std::ranges::input_range R>
+		bool DrawChar(
+			R&& range,
+			char character,
+			std::string_view foregroundColor = vt::color::ForegroundWhite,
+			std::string_view backgroundColor = vt::color::BackgroundBlack)
+		{
+			bool result = true;
+			for (const auto& position : range)
+			{
+				result = result && DrawChar(position, character, foregroundColor, backgroundColor);
+			}
+			return result;
+		}
+
 		// Draws a UTF-8 character to the provided position
 		// NOTE: Assumes that the u8string represents exactly one character
-		bool Draw(
+		bool DrawU8Char(
 			uint16_t x,
 			uint16_t y,
 			std::u8string_view character,
 			std::string_view foregroundColor = vt::color::ForegroundWhite,
 			std::string_view backgroundColor = vt::color::BackgroundBlack);
 
+		// Draws a UTF-8 character to the provided position
+		// NOTE: Assumes that the u8string represents exactly one character
+		template<typename T>
+		bool DrawU8Char(
+			T&& position,
+			std::u8string_view character,
+			std::string_view foregroundColor = vt::color::ForegroundWhite,
+			std::string_view backgroundColor = vt::color::BackgroundBlack)
+		{
+			return DrawU8Char(position.x, position.y, character, foregroundColor, backgroundColor);
+		}
+
+		// Draws a UTF-8 character to the provided position
+		// NOTE: Assumes that the u8string represents exactly one character
+		template<std::ranges::input_range R>
+		bool DrawU8Char(
+			R&& range,
+			std::u8string_view character,
+			std::string_view foregroundColor = vt::color::ForegroundWhite,
+			std::string_view backgroundColor = vt::color::BackgroundBlack)
+		{
+			bool result = true;
+			for (const auto& position : range)
+			{
+				result = result && DrawU8Char(position, character, foregroundColor, backgroundColor);
+			}
+			return result;
+		}
+
 		// Draws a string to the provided position
-		bool Draw(
+		bool DrawString(
 			uint16_t x,
 			uint16_t y,
 			std::string_view text,
 			std::string_view foregroundColor = vt::color::ForegroundWhite,
 			std::string_view backgroundColor = vt::color::BackgroundBlack);
+
+		// Draws a string to the provided position
+		template<typename T>
+		bool DrawString(
+			T&& position,
+			std::string_view text,
+			std::string_view foregroundColor = vt::color::ForegroundWhite,
+			std::string_view backgroundColor = vt::color::BackgroundBlack)
+		{
+			return DrawString(position.x, position.y, text, foregroundColor, backgroundColor);
+		}
+
+		// Draws a string to the provided positions
+		template<std::ranges::input_range R>
+		bool DrawString(
+			R&& range,
+			std::string_view text,
+			std::string_view foregroundColor = vt::color::ForegroundWhite,
+			std::string_view backgroundColor = vt::color::BackgroundBlack)
+		{
+			bool result = true;
+			for (const auto& position : range)
+			{
+				result = result && DrawString(position, text, foregroundColor, backgroundColor);
+			}
+			return result;
+		}
 
 		// Renders the current buffer to the console
 		void Present();

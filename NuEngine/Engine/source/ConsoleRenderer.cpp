@@ -46,7 +46,7 @@ namespace console
 		std::ranges::fill(GetBackBuffer(), Glyph{});
 	}
 
-	bool ConsoleRenderer::Draw(
+	bool ConsoleRenderer::DrawChar(
 		uint16_t x,
 		uint16_t y,
 		char character,
@@ -65,7 +65,7 @@ namespace console
 		return true;
 	}
 
-	bool ConsoleRenderer::Draw(
+	bool ConsoleRenderer::DrawU8Char(
 		uint16_t x,
 		uint16_t y,
 		std::u8string_view character,
@@ -84,7 +84,7 @@ namespace console
 		return true;
 	}
 
-	bool ConsoleRenderer::Draw(
+	bool ConsoleRenderer::DrawString(
 		uint16_t x,
 		uint16_t y,
 		std::string_view text,
@@ -101,7 +101,7 @@ namespace console
 		{
 			if (x + i < m_sizeX)
 			{
-				result &= Draw(x + i, y, text[i], foregroundColor, backgroundColor);
+				result = result && DrawChar(x + i, y, text[i], foregroundColor, backgroundColor);
 			}
 		}
 		return result;
