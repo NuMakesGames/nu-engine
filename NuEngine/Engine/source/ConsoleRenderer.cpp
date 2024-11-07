@@ -22,7 +22,17 @@ namespace console
 		std::cout << vt::UseAlternateScreenBuffer << vt::cursor::HideCursor;
 
 		auto [x, y] = GetConsoleScreenSize();
-		Resize(x, y);
+		Resize(x, y, false /*shouldResizeWindow*/);
+	}
+
+	ConsoleRenderer::ConsoleRenderer(uint16_t sizeX, uint16_t sizeY)
+	{
+		m_cachedConsoleState = CacheConsoleState();
+
+		VerifyElseCrash(EnableVirtualTerminalProcessing());
+		std::cout << vt::UseAlternateScreenBuffer << vt::cursor::HideCursor;
+
+		Resize(sizeX, sizeY, true /*shouldResizeWindow*/);
 	}
 
 	ConsoleRenderer::~ConsoleRenderer()
@@ -164,23 +174,26 @@ namespace console
 		m_currentBufferIndex = (m_currentBufferIndex + 1) % m_buffers.size();
 	}
 
-	void ConsoleRenderer::Resize(uint16_t desiredSizeX, uint16_t desiredSizeY)
+	void ConsoleRenderer::Resize(uint16_t desiredSizeX, uint16_t desiredSizeY, bool shouldResizeWindow)
 	{
-		if (desiredSizeX == m_sizeX && desiredSizeY == m_sizeY)
+		if (desiredSizeX != m_sizeX || desiredSizeY != m_sizeY)
 		{
-			return;
+			m_sizeX = desiredSizeX;
+			m_sizeY = desiredSizeY;
+			for (auto& buffer : m_buffers)
+			{
+				buffer.resize(m_sizeY * m_sizeX);
+				std::ranges::fill(buffer, Glyph{});
+			}
+
+			// Force a full redraw on the next present
+			m_shouldDrawAllGlyphs = true;
 		}
 
-		m_sizeX = desiredSizeX;
-		m_sizeY = desiredSizeY;
-		for (auto& buffer : m_buffers)
+		if (shouldResizeWindow)
 		{
-			buffer.resize(m_sizeY * m_sizeX);
-			std::ranges::fill(buffer, Glyph{});
+			SetConsoleScreenSize(m_sizeX, m_sizeY);
 		}
-
-		// Force a full redraw on the next present
-		m_shouldDrawAllGlyphs = true;
 	}
 
 	std::vector<ConsoleRenderer::Glyph>& ConsoleRenderer::GetBackBuffer()

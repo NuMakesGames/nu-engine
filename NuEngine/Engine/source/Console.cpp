@@ -8,7 +8,6 @@ namespace nu
 {
 namespace console
 {
-
 	CachedConsoleState CacheConsoleState()
 	{
 		CachedConsoleState state;
@@ -32,7 +31,19 @@ namespace console
 		{
 			state.cursorPositionX = bufferInfo.dwCursorPosition.X;
 			state.cursorPositionY = bufferInfo.dwCursorPosition.Y;
+
 			state.wTextAttributes = bufferInfo.wAttributes;
+
+			state.bufferSizeX = bufferInfo.dwSize.X;
+			state.bufferSizeY = bufferInfo.dwSize.Y;
+
+			state.maximumWindowSizeX = bufferInfo.dwMaximumWindowSize.X;
+			state.maximumWindowSizeY = bufferInfo.dwMaximumWindowSize.Y;
+
+			state.windowRectTop = bufferInfo.srWindow.Top;
+			state.windowRectLeft = bufferInfo.srWindow.Left;
+			state.windowRectBottom = bufferInfo.srWindow.Bottom;
+			state.windowRectRight = bufferInfo.srWindow.Right;
 		}
 
 		CONSOLE_CURSOR_INFO cursorInfo{ 0 };
@@ -65,6 +76,25 @@ namespace console
 		CONSOLE_CURSOR_INFO cursorInfo{ .dwSize = state.dwCursorSize, .bVisible = state.bCursorVisible };
 		::SetConsoleCursorInfo(state.hOut, &cursorInfo);
 
+		CONSOLE_SCREEN_BUFFER_INFOEX bufferInfo{ 0 };
+		bufferInfo.cbSize = sizeof(bufferInfo);
+		if (::GetConsoleScreenBufferInfoEx(state.hOut, &bufferInfo))
+		{
+			bufferInfo.dwSize.X = state.bufferSizeX;
+			bufferInfo.dwSize.Y = state.bufferSizeY;
+			bufferInfo.dwMaximumWindowSize.X = state.maximumWindowSizeX;
+			bufferInfo.dwMaximumWindowSize.Y = state.maximumWindowSizeY;
+			bufferInfo.srWindow.Top = state.windowRectTop;
+			bufferInfo.srWindow.Left = state.windowRectLeft;
+
+			// For reasons that aren't clear, restoring to the original values results in conhost being 1 line too short
+			// and introduces scrolling.
+			bufferInfo.srWindow.Bottom = state.windowRectBottom + 1;
+			bufferInfo.srWindow.Right = state.windowRectRight + 1;
+
+			::SetConsoleScreenBufferInfoEx(state.hOut, &bufferInfo);
+		}
+
 		::SetConsoleCP(state.codePage);
 	}
 
@@ -85,6 +115,41 @@ namespace console
 		uint16_t x = info.srWindow.Right - info.srWindow.Left + 1;
 		uint16_t y = info.srWindow.Bottom - info.srWindow.Top + 1;
 		return std::make_pair(x, y);
+	}
+
+	bool SetConsoleScreenSize(uint16_t sizeX, uint16_t sizeY)
+	{
+		HANDLE hOut = ::GetStdHandle(STD_OUTPUT_HANDLE);
+		if (hOut == INVALID_HANDLE_VALUE)
+		{
+			return false;
+		}
+
+		CONSOLE_SCREEN_BUFFER_INFOEX bufferInfo{ 0 };
+		bufferInfo.cbSize = sizeof(bufferInfo);
+		if (!::GetConsoleScreenBufferInfoEx(hOut, &bufferInfo))
+		{
+			return false;
+		}
+
+		if (bufferInfo.dwSize.X != sizeX || bufferInfo.dwSize.Y != sizeY || bufferInfo.dwMaximumWindowSize.X != sizeX
+		    || bufferInfo.dwMaximumWindowSize.Y != sizeY)
+		{
+			bufferInfo.dwSize.X = sizeX;
+			bufferInfo.dwSize.Y = sizeY;
+
+			bufferInfo.dwMaximumWindowSize.X = sizeX;
+			bufferInfo.dwMaximumWindowSize.Y = sizeY;
+
+			bufferInfo.srWindow.Left = 0;
+			bufferInfo.srWindow.Top = 0;
+			bufferInfo.srWindow.Right = sizeX;
+			bufferInfo.srWindow.Bottom = sizeY;
+
+			return ::SetConsoleScreenBufferInfoEx(hOut, &bufferInfo);
+		}
+
+		return true;
 	}
 
 	bool EnableVirtualTerminalProcessing()

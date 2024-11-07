@@ -18,7 +18,10 @@ namespace console
 		// Constructor sets up the console for virtual terminal processing
 		ConsoleRenderer();
 
-		// Destructor restores the console's original mode
+		// Constructor sets up the console for virtual terminal processing and attempts to resize the console buffer/window
+		ConsoleRenderer(uint16_t sizeX, uint16_t sizeY);
+
+		// Destructor restores original console state
 		~ConsoleRenderer();
 
 		// Clears the current buffer
@@ -52,8 +55,8 @@ namespace console
 		// Renders the current buffer to the console
 		void Present();
 
-		// Resizes the renderer to the desired width and height
-		void Resize(uint16_t sizeX, uint16_t sizeY);
+		// Resizes the renderer to the desired width and height and optionally attempts to resize window
+		void Resize(uint16_t sizeX, uint16_t sizeY, bool shouldResizeWindow = false);
 
 		// Returns the current width of the renderer
 		uint16_t GetWidth() const noexcept
