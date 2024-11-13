@@ -160,7 +160,7 @@ namespace console
 		// Flush to make sure the console actually updates
 		if (!builder.empty())
 		{
-			std::cout << std::string(builder.begin(), builder.end());
+			std::cout << std::string(builder.begin(), builder.end()) << vt::cursor::HideCursor;
 			std::cout.flush();
 		}
 
