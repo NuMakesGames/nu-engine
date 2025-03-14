@@ -127,7 +127,7 @@ public:
 	void Render(nu::console::ConsoleRenderer& renderer) override
 	{
 		// Draw spawner
-		renderer.Draw(m_x, 0, u8"▼", vt::color::ForegroundBrightWhite);
+		renderer.DrawU8Char(m_x, 0, u8"▼", vt::color::ForegroundBrightWhite);
 
 		// Draw snowflakes
 		for (uint16_t x = 0; x < m_snowflakes.size(); ++x)
@@ -138,10 +138,10 @@ public:
 				continue;
 			}
 
-			renderer.Draw(x, snowflake.y, u8"❄", vt::color::ForegroundBrightCyan);
+			renderer.DrawU8Char(x, snowflake.y, u8"❄", vt::color::ForegroundBrightCyan);
 			for (int j = 1; snowflake.y - j >= 1 && j < 5; ++j)
 			{
-				renderer.Draw(x, snowflake.y - j, u8"•", vt::color::ForegroundCyan);
+				renderer.DrawU8Char(x, snowflake.y - j, u8"•", vt::color::ForegroundCyan);
 			}
 		}
 
@@ -163,8 +163,8 @@ public:
 				                                                  : vt::color::ForegroundBrightGreen;
 			}
 
-			renderer.Draw(0, y, label, vt::color::ForegroundWhite);
-			renderer.Draw(x, y, std::format("{:>5.2f}ms", time.count()), color);
+			renderer.DrawString(0, y, label, vt::color::ForegroundWhite);
+			renderer.DrawString(x, y, std::format("{:>5.2f}ms", time.count()), color);
 		};
 
 		auto yMax = std::max(renderer.GetHeight() - 1, 4);
