@@ -77,8 +77,11 @@ namespace console
 			return false;
 		}
 
+		auto [extractedCharacter, remainingView] = ReadNextU8Char(character);
+		VerifyElseCrash(remainingView.empty()); // Ensure that the input is exactly one character
+
 		Glyph& glyph = GetBackBuffer()[y * m_sizeX + x];
-		glyph.character = character;
+		glyph.character = extractedCharacter;
 		glyph.foregroundColor = std::string(foregroundColor);
 		glyph.backgroundColor = std::string(backgroundColor);
 		return true;
@@ -104,6 +107,25 @@ namespace console
 				result = result && DrawChar(x + i, y, text[i], foregroundColor, backgroundColor);
 			}
 		}
+		return result;
+	}
+
+	bool ConsoleRenderer::DrawU8String(
+		uint16_t x,
+		uint16_t y,
+		std::u8string_view text,
+		std::string_view foregroundColor,
+		std::string_view backgroundColor)
+	{
+		bool result = true;
+		auto [extractedCharacter, remainingView] = ReadNextU8Char(text);
+		while (!extractedCharacter.empty())
+		{
+			result = result && DrawU8Char(x, y, extractedCharacter, foregroundColor, backgroundColor);
+			std::tie(extractedCharacter, remainingView) = ReadNextU8Char(remainingView);
+			++x;
+		}
+
 		return result;
 	}
 
@@ -207,6 +229,47 @@ namespace console
 		VerifyElseCrash(m_currentBufferIndex < m_buffers.size());
 		size_t frontBufferIndex = (m_currentBufferIndex + 1) % m_buffers.size();
 		return m_buffers[frontBufferIndex];
+	}
+
+	std::pair<std::u8string, std::u8string_view> ConsoleRenderer::ReadNextU8Char(std::u8string_view text)
+	{
+		if (text.empty())
+		{
+			return { std::u8string{}, text };
+		}
+
+		const char8_t* data = text.data();
+		size_t length = text.size();
+
+		size_t bytes = 0;
+		if ((data[0] & 0b10000000) == 0)
+		{
+			bytes = 1;
+		}
+		else if ((data[0] & 0b11100000) == 0b11000000)
+		{
+			bytes = 2;
+		}
+		else if ((data[0] & 0b11110000) == 0b11100000)
+		{
+			bytes = 3;
+		}
+		else if ((data[0] & 0b11111000) == 0b11110000)
+		{
+			bytes = 4;
+		}
+
+		if (bytes == 0 || length < bytes)
+		{
+			// Invalid UTF-8 sequence
+			return { std::u8string{}, text };
+		}
+
+		// Extract the character and the remaining view
+		std::u8string character(data, bytes);
+		std::u8string_view remainingView(data + bytes, length - bytes);
+
+		return { character, remainingView };
 	}
 } // namespace console
 } // namespace nu
