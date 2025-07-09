@@ -135,6 +135,41 @@ namespace console
 			return result;
 		}
 
+		// Draws a UTF-8 string to the provided position
+		bool DrawU8String(
+			uint16_t x,
+			uint16_t y,
+			std::u8string_view text,
+			std::string_view foregroundColor = vt::color::ForegroundWhite,
+			std::string_view backgroundColor = vt::color::BackgroundBlack);
+
+		// Draws a UTF-8 string to the provided position
+		template<typename T>
+		bool DrawU8String(
+			T&& position,
+			std::u8string_view text,
+			std::string_view foregroundColor = vt::color::ForegroundWhite,
+			std::string_view backgroundColor = vt::color::BackgroundBlack)
+		{
+			return DrawU8String(position.x, position.y, text, foregroundColor, backgroundColor);
+		}
+
+		// Draws a UTF-8 string to the provided positions
+		template<std::ranges::input_range R>
+		bool DrawU8String(
+			R&& range,
+			std::u8string_view text,
+			std::string_view foregroundColor = vt::color::ForegroundWhite,
+			std::string_view backgroundColor = vt::color::BackgroundBlack)
+		{
+			bool result = true;
+			for (const auto& position : range)
+			{
+				result = result && DrawU8String(position, text, foregroundColor, backgroundColor);
+			}
+			return result;
+		}
+
 		// Renders the current buffer to the console
 		void Present();
 
@@ -191,6 +226,9 @@ namespace console
 
 		// Retrieves the front buffer that was last presented
 		std::vector<Glyph>& GetFrontBuffer();
+
+		// Helper function to decode a single UTF-8 code point
+		std::pair<std::u8string, std::u8string_view> ReadNextU8Char(std::u8string_view data);
 
 	private:
 		// True if the buffers were resized since last present
