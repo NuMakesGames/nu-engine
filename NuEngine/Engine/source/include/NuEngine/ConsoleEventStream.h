@@ -3,6 +3,7 @@
 #include <vector>
 
 #include "NuEngine/Console.h"
+#include <string>
 
 namespace nu
 {
@@ -58,17 +59,28 @@ namespace console
 		X = 0x58,
 		Y = 0x59,
 		Z = 0x5A,
+		GraveAccent = 0x60
 	};
+
+	enum class KeyInputMode : uint8_t
+	{
+		Keys,  // Process keys as individual key events
+		Lines  // Process input as lines of text
+	};
+
 
 	// Interface for consumers of keyboard input
 	class IKeyboardInputConsumer
 	{
 	public:
-		// Called when a key is pressed; return true if input is handled
+		// Called when a key is pressed in Keys input mode; return true if input is handled
 		virtual bool OnKeyDown(Key key) = 0;
 
-		// Called when a key is released; return true if input is handled
+		// Called when a key is released in Keys input mode; return true if input is handled
 		virtual bool OnKeyUp(Key key) = 0;
+
+		// Called when a line of text is completed in Lines input mode; return true if input is handled
+		virtual bool OnLineInput(const std::u8string& line) = 0;
 	};
 
 	// Interface for consumers of window resize events
@@ -105,6 +117,24 @@ namespace console
 		// Unregisters a consumer of window resize events
 		void UnregisterWindowResizeConsumer(IWindowResizeConsumer* consumer);
 
+		// Returns the current input mode for key events
+		KeyInputMode GetKeyInputMode() const noexcept
+		{
+			return m_keyInputMode;
+		}
+
+		// Sets the input mode for key events
+		void SetKeyInputMode(KeyInputMode mode);
+
+		// Returns the current line being built in Lines input mode, including control characters (ex. escape, backspace)
+		const std::wstring& GetCurrentLineRaw() const noexcept
+		{
+			return m_currentLine;
+		}
+
+		// Returns the current line being built in Lines input mode
+		const std::u8string& GetCurrentLine();
+
 		// Delete copy/move construction and assignment
 	private:
 		ConsoleEventStream(ConsoleEventStream&) = delete;
@@ -119,6 +149,18 @@ namespace console
 	private:
 		// Console configuration at construction. Restored at destruction.
 		CachedConsoleState m_cachedConsoleState;
+
+		// Current input mode for key events
+		KeyInputMode m_keyInputMode = KeyInputMode::Keys;
+
+		// Current line being built in Lines input mode
+		std::wstring m_currentLine;
+
+		// Current line being built in Lines input mode, converted to UTF-8
+		std::u8string m_currentLineUtf8;
+
+		// Whether m_currentLineUtf8 needs to be updated from m_currentLine
+		bool m_isCurrentLineUtf8Valid = false;
 
 		// Registered consumers of keyboard input
 		std::vector<IKeyboardInputConsumer*> m_keyConsumers;

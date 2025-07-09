@@ -78,7 +78,12 @@ public:
 				return true;
 			default:
 				return false;
-		}	
+		}
+	}
+
+	bool OnLineInput(const std::u8string& line)
+	{
+		return false;
 	}
 
 	void BeginPlay() override

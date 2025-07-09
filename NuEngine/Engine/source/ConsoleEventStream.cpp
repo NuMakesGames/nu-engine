@@ -9,6 +9,7 @@
 #define WIN32_LEAN_AND_MEAN
 #define NOMINMAX
 #include "Windows.h"
+#include "conio.h"
 
 namespace nu
 {
@@ -27,9 +28,47 @@ namespace console
 
 	void ConsoleEventStream::ProcessEvents()
 	{
+		if (m_keyInputMode == KeyInputMode::Lines)
+		{
+			// In Lines input mode, process new keyboard input without blocking.
+			// This limits the richness of standard text input, but std::getline and comparables
+			// block until input is available, which would halt engine progress.
+			while (_kbhit())
+			{
+				wint_t ch = _getwch();
+
+				// Check for surrogate pair in UTF-16 input
+				if (ch >= 0xD800 && ch <= 0xDFFF)
+				{
+					m_currentLine += ch;
+					m_currentLine += _getwch(); // Read the next surrogate pair character
+					m_isCurrentLineUtf8Valid = false;
+					continue;
+				}
+
+				if (ch == VK_RETURN)
+				{
+					for (auto* consumer : m_keyConsumers)
+					{
+						if (consumer->OnLineInput(GetCurrentLine()))
+						{
+							break;
+						}
+					}
+
+					m_currentLine.clear();
+					m_isCurrentLineUtf8Valid = false;
+					continue;
+				}
+
+				m_currentLine += ch;
+				m_isCurrentLineUtf8Valid = false;
+			}
+		}
+
+		// Process input events
 		constexpr DWORD eventsPerLoop = 512;
 		std::array<INPUT_RECORD, eventsPerLoop> inputRecords;
-
 		DWORD eventsToRead = 0;
 		while (::GetNumberOfConsoleInputEvents(m_cachedConsoleState.hIn, &eventsToRead) && eventsToRead > 0)
 		{
@@ -58,6 +97,12 @@ namespace console
 					}
 					case KEY_EVENT:
 					{
+						// Discard key events if not in Keys input mode
+						if (m_keyInputMode != KeyInputMode::Keys)
+						{
+							break;
+						}
+
 						const auto& keyEvent = inputRecords[i].Event.KeyEvent;
 						auto [wasKeyMapped, key] = TryMapKey(keyEvent.wVirtualKeyCode);
 						if (!wasKeyMapped)
@@ -112,6 +157,56 @@ namespace console
 	void ConsoleEventStream::UnregisterWindowResizeConsumer(IWindowResizeConsumer* consumer)
 	{
 		std::erase(m_resizeConsumers, consumer);
+	}
+
+	void ConsoleEventStream::SetKeyInputMode(KeyInputMode mode)
+	{
+		if (m_keyInputMode == mode)
+		{
+			return;
+		}
+
+		if (m_keyInputMode == KeyInputMode::Lines)
+		{
+			m_currentLine.clear();
+			m_currentLineUtf8.clear();
+		}
+
+		m_keyInputMode = mode;
+	}
+
+	const std::u8string& ConsoleEventStream::GetCurrentLine()
+	{
+		if (m_isCurrentLineUtf8Valid)
+		{
+			return m_currentLineUtf8;
+		}
+
+		m_currentLineUtf8.clear();
+		if (m_currentLine.empty())
+		{
+			m_isCurrentLineUtf8Valid = true;
+			return m_currentLineUtf8;
+		}
+
+		// Convert from UTF-16 wide string to UTF-8
+		int requiredSize = ::WideCharToMultiByte(
+			CP_UTF8, 0, m_currentLine.c_str(), static_cast<int>(m_currentLine.size()), nullptr, 0, nullptr, nullptr);
+		VerifyElseCrash(requiredSize > 0);
+
+		m_currentLineUtf8.resize(requiredSize);
+		::WideCharToMultiByte(
+			CP_UTF8,
+			0,
+			m_currentLine.c_str(),
+			static_cast<int>(m_currentLine.size()),
+			reinterpret_cast<char*>(m_currentLineUtf8.data()),
+			requiredSize,
+			nullptr,
+			nullptr);
+
+		m_isCurrentLineUtf8Valid = true;
+		return m_currentLineUtf8;
 	}
 
 	/*static*/ std::pair<bool, Key> ConsoleEventStream::TryMapKey(uint16_t virtualKeyCode)
@@ -214,6 +309,8 @@ namespace console
 				return { true, Key::Y };
 			case 'Z':
 				return { true, Key::Z };
+			case VK_OEM_3:
+				return { true, Key::GraveAccent };
 			default:
 				return { false, Key::Escape };
 		}

@@ -27,6 +27,9 @@ namespace engine
 		// Callback for IKeyboardInputConsumer when a key is released
 		virtual bool OnKeyUp(nu::console::Key key);
 
+		// Callback for IKeyboardInputConsumer when a line of input is available
+		virtual bool OnLineInput(const std::u8string& line);
+
 		// Desired size for the renderer; called when the window is resized
 		void SetDesiredRendererSize(uint16_t x, uint16_t y) noexcept;
 
@@ -130,6 +133,8 @@ namespace engine
 	private:
 		Game* m_game = nullptr;
 		bool m_shouldStopGame = false;
+		bool m_isCommanderEnabled = false;
+		bool m_showFps = false;
 		uint16_t m_renderSizeX = 0;
 		uint16_t m_renderSizeY = 0;
 		uint16_t m_targetFramesPerSecond = 60;

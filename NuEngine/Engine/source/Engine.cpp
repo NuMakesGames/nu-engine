@@ -1,4 +1,4 @@
-#include "NuEngine/Engine.h"
+﻿#include "NuEngine/Engine.h"
 
 #include <chrono>
 #include <thread>
@@ -50,8 +50,29 @@ namespace engine
 			auto deltaTime = frameTimer.ElapsedSeconds();
 			frameTimer.Restart();
 
+			// Make sure input mode is set correctly based on whether the commander is currently enabled
+			if (m_isCommanderEnabled && eventStream.GetKeyInputMode() == KeyInputMode::Keys)
+			{
+				eventStream.SetKeyInputMode(KeyInputMode::Lines);
+			}
+			else if (!m_isCommanderEnabled && eventStream.GetKeyInputMode() == KeyInputMode::Lines)
+			{
+				eventStream.SetKeyInputMode(KeyInputMode::Keys);
+			}
+
 			// Process input and window resize events
 			eventStream.ProcessEvents();
+
+			// Check if commander should be dismissed; this can't use OnKeyDown events, because commander disables them
+			if (m_isCommanderEnabled)
+			{
+				const auto& rawLine = eventStream.GetCurrentLineRaw();
+				if (rawLine.find(static_cast<wchar_t>(Key::Escape)) != std::wstring::npos
+				    || rawLine.find(static_cast<wchar_t>(Key::GraveAccent)) != std::wstring::npos)
+				{
+					m_isCommanderEnabled = false;
+				}
+			}
 
 			// Resize the renderer if necessary
 			if (renderer.GetWidth() != m_renderSizeX || renderer.GetHeight() != m_renderSizeY)
@@ -71,6 +92,28 @@ namespace engine
 			game.Render(renderer);
 			renderTimer.Stop();
 
+			// Draw the commander
+			if (m_isCommanderEnabled)
+			{
+				for (uint16_t x = 0; x < m_renderSizeX; ++x)
+				{
+					renderer.DrawChar(x, m_renderSizeY - 1, ' ', vt::color::ForegroundBlack, vt::color::BackgroundBrightBlue);
+				}
+
+				renderer.DrawString(0, m_renderSizeY - 1, "> ", vt::color::ForegroundBrightWhite, vt::color::BackgroundBrightBlue);
+				renderer.DrawU8String(2, m_renderSizeY - 1, eventStream.GetCurrentLine(), vt::color::ForegroundBrightWhite, vt::color::BackgroundBrightBlue);
+			}
+
+			// Render FPS counter, if enabled
+			if (m_showFps)
+			{
+				int fps = static_cast<int>(std::round(1.f / m_lastFrameTime.count()));
+				std::string fpsString = std::format("{} FPS", fps);
+				int x = std::max(0, m_renderSizeX - static_cast<int>(fpsString.size()) - 1);
+				int y = std::max(0, m_renderSizeY / 2 - 10);
+				renderer.DrawString(x, y, fpsString, vt::color::ForegroundBrightCyan);
+			}
+
 			// Present to the console
 			presentTimer.Restart();
 			renderer.Present();
@@ -78,8 +121,7 @@ namespace engine
 
 			// Idle until the next frame. Sleep until within 1.5 ms, then yield until within 0.1 ms, then busy-wait.
 			idleTimer.Restart();
-			auto targetFrameTime =
-				std::chrono::microseconds(static_cast<int>(1.f / m_targetFramesPerSecond * 1'000'000));
+			auto targetFrameTime = std::chrono::microseconds(static_cast<int>(1.f / m_targetFramesPerSecond * 1'000'000));
 			while (targetFrameTime > frameTimer.ElapsedDuration())
 			{
 				auto remainingTime = targetFrameTime - frameTimer.ElapsedMilliseconds();
@@ -138,12 +180,40 @@ namespace engine
 			return true;
 		}
 
+		if (key == Key::GraveAccent)
+		{
+			m_isCommanderEnabled = true;
+			return true;
+		}
+
 		return false;
 	}
 
 	bool Engine::OnKeyUp(Key key)
 	{
 		return m_game->OnKeyUp(key);
+	}
+
+	bool Engine::OnLineInput(const std::u8string& line)
+	{
+		if (m_game->OnLineInput(line))
+		{
+			return true;
+		}
+
+		if (line == u8"quit" || line == u8"exit")
+		{
+			StopGame();
+			return true;
+		}
+
+		if (line == u8"fps")
+		{
+			m_showFps = !m_showFps;
+			return true;
+		}
+
+		return false;
 	}
 
 	void Engine::SetDesiredRendererSize(uint16_t x, uint16_t y) noexcept

@@ -95,7 +95,7 @@ namespace console
 			::SetConsoleScreenBufferInfoEx(state.hOut, &bufferInfo);
 		}
 
-		::SetConsoleCP(state.codePage);
+		::SetConsoleOutputCP(state.codePage);
 	}
 
 	std::pair<uint16_t, uint16_t> GetConsoleScreenSize()
