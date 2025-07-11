@@ -51,6 +51,10 @@ public:
 					++m_currentMovement;
 				}
 				return true;
+			case Key::P:
+				// Toggle autoplay
+				m_autoplayEnabled = !m_autoplayEnabled;
+				return true;
 			default:
 				return false;
 		}
@@ -83,6 +87,12 @@ public:
 
 	bool OnLineInput(const std::u8string& line)
 	{
+		if (line == u8"autoplay")
+		{
+			m_autoplayEnabled = !m_autoplayEnabled;
+			return true;
+		}
+
 		return false;
 	}
 
@@ -97,6 +107,11 @@ public:
 
 	void Tick(std::chrono::duration<double> deltaTime) override
 	{
+		if (m_autoplayEnabled)
+		{
+			TickAutoplay(deltaTime);
+		}
+
 		m_x += m_currentMovement;
 		m_x = std::clamp(m_x, 0, static_cast<int>(m_snowflakes.size() - 1));
 
@@ -185,6 +200,51 @@ public:
 	}
 
 private:
+	void TickAutoplay(std::chrono::duration<double> deltaTime)
+	{
+		static std::chrono::milliseconds timeSinceLastMovement = 0ms;
+		timeSinceLastMovement += std::chrono::duration_cast<std::chrono::milliseconds>(deltaTime);
+		if (timeSinceLastMovement < 50ms)
+		{
+			return; // Wait for 100ms before moving again
+		}
+		timeSinceLastMovement = 0ms;
+
+		if (m_x <= 0)
+		{
+			m_currentMovement = 1; // Move right
+			return;
+		}
+		
+		if (m_x >= GetEngine()->GetRendererWidth() - 1)
+		{
+			m_currentMovement = -1; // Move left
+			return;
+		}
+
+		// Roll a random number between 0 and 1
+		const auto movementRandom = static_cast<double>(rand()) / RAND_MAX;
+		if (m_currentMovement == 0 && movementRandom < 0.2)
+		{
+			m_currentMovement = movementRandom < 0.1 ? -1 : 1; // Randomly choose direction
+		}
+		else if (movementRandom < 0.2)
+		{
+			m_currentMovement = 0; // Stop moving
+		}
+		else if (movementRandom < 0.21)
+		{
+			m_currentMovement = -m_currentMovement; // Reverse direction
+		}
+
+		const auto snowflakeRandom = static_cast<double>(rand()) / RAND_MAX;
+		if (snowflakeRandom < 0.1)
+		{
+			// Spawn a snowflake at the current position
+			m_snowflakes[m_x] = { 1, 0ms };
+		}
+	}
+
 	struct Snowflake
 	{
 		int y;
@@ -193,6 +253,7 @@ private:
 
 	int m_x;
 	int m_currentMovement = 0;
+	bool m_autoplayEnabled = false;
 	std::vector<Snowflake> m_snowflakes;
 
 	// Delete copy/move construction and assignment
