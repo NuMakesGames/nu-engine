@@ -60,8 +60,8 @@ namespace console
 
 		Glyph& glyph = GetBackBuffer()[y * m_sizeX + x];
 		glyph.character = character;
-		glyph.foregroundColor = std::string(foregroundColor);
-		glyph.backgroundColor = std::string(backgroundColor);
+		glyph.foregroundColor.assign(foregroundColor);
+		glyph.backgroundColor.assign(backgroundColor);
 		return true;
 	}
 
@@ -82,8 +82,8 @@ namespace console
 
 		Glyph& glyph = GetBackBuffer()[y * m_sizeX + x];
 		glyph.character = extractedCharacter;
-		glyph.foregroundColor = std::string(foregroundColor);
-		glyph.backgroundColor = std::string(backgroundColor);
+		glyph.foregroundColor.assign(foregroundColor);
+		glyph.backgroundColor.assign(backgroundColor);
 		return true;
 	}
 
