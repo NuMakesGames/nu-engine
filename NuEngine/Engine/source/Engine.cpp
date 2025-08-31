@@ -121,19 +121,22 @@ namespace engine
 
 			// Idle until the next frame. Sleep until within 1.5 ms, then yield until within 0.1 ms, then busy-wait.
 			idleTimer.Restart();
-			auto targetFrameTime = std::chrono::microseconds(static_cast<int>(1.f / m_targetFramesPerSecond * 1'000'000));
-			while (targetFrameTime > frameTimer.ElapsedDuration())
+			if (m_targetFramesPerSecond > 0)
 			{
-				auto remainingTime = targetFrameTime - frameTimer.ElapsedMilliseconds();
-				constexpr auto spinThreshold = 1.5ms;
-				constexpr auto yieldThreshold = 0.1ms;
-				if (remainingTime > spinThreshold)
+				auto targetFrameTime = std::chrono::microseconds(static_cast<int>(1.f / m_targetFramesPerSecond * 1'000'000));
+				while (targetFrameTime > frameTimer.ElapsedDuration())
 				{
-					std::this_thread::sleep_for(remainingTime - spinThreshold);
-				}
-				else if (remainingTime > yieldThreshold)
-				{
-					std::this_thread::yield();
+					auto remainingTime = targetFrameTime - frameTimer.ElapsedMilliseconds();
+					constexpr auto spinThreshold = 1.5ms;
+					constexpr auto yieldThreshold = 0.1ms;
+					if (remainingTime > spinThreshold)
+					{
+						std::this_thread::sleep_for(remainingTime - spinThreshold);
+					}
+					else if (remainingTime > yieldThreshold)
+					{
+						std::this_thread::yield();
+					}
 				}
 			}
 			idleTimer.Stop();
