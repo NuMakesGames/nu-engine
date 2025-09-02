@@ -10,6 +10,8 @@
 #include "NuEngine/Engine.h"
 #include "NuEngine/VirtualTerminalSequences.h"
 
+#include "Benchmark.h"
+
 using namespace nu::console;
 using namespace std::chrono_literals;
 using namespace std::literals;
@@ -251,7 +253,7 @@ private:
 		std::chrono::milliseconds accruedTime;
 	};
 
-	int m_x;
+	int m_x = 0;
 	int m_currentMovement = 0;
 	bool m_autoplayEnabled = false;
 	std::vector<Snowflake> m_snowflakes;
@@ -267,6 +269,6 @@ private:
 int main()
 {
 	nu::engine::Engine engine;
-	Snow game;
+	Benchmark game;
 	engine.StartGame(game);
 }

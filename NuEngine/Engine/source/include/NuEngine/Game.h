@@ -39,6 +39,12 @@ namespace engine
 			return false;
 		}
 
+		// Optional callback when a line of text is completed in Lines input mode
+		virtual bool OnLineInput(const std::u8string& line)
+		{
+			return false;
+		}
+
 		// Optional callback when the window is resized
 		virtual void OnWindowResize(uint16_t width, uint16_t height)
 		{
