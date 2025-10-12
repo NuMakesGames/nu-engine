@@ -1,12 +1,18 @@
 #include "Benchmark.h"
 
+#include <algorithm>
+#include <ranges>
 #include <string_view>
 
+#include "NuEngine/Assertions.h"
 #include "NuEngine/Engine.h"
 #include "NuEngine/Game.h"
 #include "NuEngine/VirtualTerminalSequences.h"
 
 using namespace std::literals;
+
+constexpr auto numFramesPerPhase = 2000;
+constexpr auto numPhases = 5;
 
 enum class Color : uint8_t
 {
@@ -74,15 +80,15 @@ const std::array<std::string, static_cast<size_t>(Color::Size)> colors{
 	vt::color::ForegroundRGB(0, 0, 255),
 };
 
-Benchmark::Benchmark()
-{
-}
-
 void Benchmark::BeginPlay()
 {
 	// Disable frame rate limit
 	GetEngine()->SetTargetFramesPerSecond(0);
+	Restart();
+}
 
+void Benchmark::Restart()
+{
 	auto [width, height] = GetEngine()->GetRendererSize();
 	m_noise.resize(width * height);
 
@@ -95,8 +101,26 @@ void Benchmark::BeginPlay()
 		col = colorDistribution(m_rng);
 	}
 
-	// Store the original noise for subssequent test phases
+	// Store the original noise for subsequent test phases
 	m_noiseOriginal = m_noise;
+
+	// Reset state
+	m_accruedTime = 0us;
+	m_currentFrame = 0;
+	m_changePercent = 10;
+	m_phase = 0;
+
+	// Invalidate any frame timings
+	m_phaseFrameTimings.clear();
+	m_phaseFrameTimings.resize(numPhases);
+	for (auto& frameTimings : m_phaseFrameTimings)
+	{
+		frameTimings.clear();
+		frameTimings.reserve(numFramesPerPhase);
+	}
+
+	// Invalidate any results
+	m_phaseResults.clear();
 }
 
 void Benchmark::EndPlay()
@@ -120,7 +144,7 @@ void Benchmark::Tick(std::chrono::duration<double> deltaTime)
 	if (m_phase == 0)
 	{
 		m_accruedTime += std::chrono::duration_cast<std::chrono::microseconds>(deltaTime);
-		if (m_accruedTime < 5s)
+		if (m_accruedTime < 3s)
 		{
 			return;
 		}
@@ -128,9 +152,39 @@ void Benchmark::Tick(std::chrono::duration<double> deltaTime)
 		incrementPhase();
 	}
 
-	if (m_phase >= 6)
+	if (m_phase >= numPhases + 1)
 	{
+		if (m_phaseResults.empty())
+		{
+			m_phaseResults.resize(numPhases);
+		}
+
+		VerifyElseCrash(m_phaseFrameTimings.size() == m_phaseResults.size());
+		for (auto i = 0; i < m_phaseResults.size(); ++i)
+		{
+			auto& phaseResult = m_phaseResults[i];
+			auto& phaseFrameTimings = m_phaseFrameTimings[i];
+			phaseResult.frames = phaseFrameTimings.size();
+			for (const auto& frameTime : phaseFrameTimings)
+			{
+				phaseResult.averageFrameTimings.totalFrameTime += frameTime.totalFrameTime;
+				phaseResult.averageFrameTimings.tickTime += frameTime.tickTime;
+				phaseResult.averageFrameTimings.renderTime += frameTime.renderTime;
+				phaseResult.averageFrameTimings.presentTime += frameTime.presentTime;
+				phaseResult.averageFrameTimings.idleTime += frameTime.idleTime;
+			}
+			phaseResult.averageFrameTimings.totalFrameTime /= static_cast<double>(phaseResult.frames);
+			phaseResult.averageFrameTimings.tickTime /= static_cast<double>(phaseResult.frames);
+			phaseResult.averageFrameTimings.renderTime /= static_cast<double>(phaseResult.frames);
+			phaseResult.averageFrameTimings.presentTime /= static_cast<double>(phaseResult.frames);
+			phaseResult.averageFrameTimings.idleTime /= static_cast<double>(phaseResult.frames);
+		}
 		return;
+	}
+
+	if (m_currentFrame != 0)
+	{
+		m_phaseFrameTimings[m_phase - 1].emplace_back(GetEngine()->GetLastFrameTimings());
 	}
 
 	++m_currentFrame;
@@ -151,7 +205,7 @@ void Benchmark::Tick(std::chrono::duration<double> deltaTime)
 		col = (col + 1) % colors.size();
 	}
 
-	if (m_currentFrame > 20000)
+	if (m_currentFrame > numFramesPerPhase)
 	{
 		incrementPhase();
 		return;
@@ -163,7 +217,7 @@ void Benchmark::Render(nu::console::ConsoleRenderer& renderer)
 	if (m_phase == 0)
 	{
 		uint16_t y = 0;
-		renderer.DrawString(0, y++, "Benchmark will render 20,000 frames of random symbols and colors, 5 times:"sv);
+		renderer.DrawString(0, y++, "Benchmark will simulate/render frames of random symbols and colors, 5 times:"sv);
 		renderer.DrawString(0, y++, "    Test 1 - 10% of symbols change each frame"sv);
 		renderer.DrawString(0, y++, "    Test 2 - 30% of symbols change each frame"sv);
 		renderer.DrawString(0, y++, "    Test 3 - 50% of symbols change each frame"sv);
@@ -172,16 +226,60 @@ void Benchmark::Render(nu::console::ConsoleRenderer& renderer)
 		renderer.DrawString(
 			0,
 			++y,
-			std::format("Starting in {} seconds...", std::chrono::duration_cast<std::chrono::seconds>(5s - m_accruedTime).count()),
+			std::format("Starting in {} seconds...", std::chrono::duration_cast<std::chrono::seconds>(3s - m_accruedTime).count()),
 			vt::color::ForegroundBrightYellow);
 		return;
 	}
 
-	if (m_phase == 6)
+	if (m_phase >= numPhases + 1)
 	{
-		// TODO: Show final results
+		if (m_phaseResults.empty())
+		{
+			return;
+		}
+
 		uint16_t y = 0;
-		renderer.DrawString(0, y, "Benchmark complete. TODO RESULTS."sv);
+		renderer.DrawString(0, y++, "Benchmark complete."sv);
+
+		auto drawResults = [&y, &renderer](const PhaseResult& phaseResult)
+		{
+			auto toMs = [](const auto& duration) { return std::chrono::duration_cast<std::chrono::duration<double, std::milli>>(duration).count(); };
+			constexpr auto x = ("    Average present time: "sv).size();
+			renderer.DrawString(0, y, "    Total frames: "sv, vt::color::ForegroundWhite);
+			renderer.DrawString(x, y++, std::format("{:>7}", phaseResult.frames), vt::color::ForegroundBrightWhite);
+			renderer.DrawString(0, y, "    Average frame time:   "sv, vt::color::ForegroundWhite);
+			renderer.DrawString(x, y++, std::format("{:>5.2f}ms", toMs(phaseResult.averageFrameTimings.totalFrameTime)), vt::color::ForegroundBrightWhite);
+			renderer.DrawString(0, y, "    Average tick time:    "sv, vt::color::ForegroundWhite);
+			renderer.DrawString(x, y++, std::format("{:>5.2f}ms", toMs(phaseResult.averageFrameTimings.tickTime)), vt::color::ForegroundBrightWhite);
+			renderer.DrawString(0, y, "    Average render time:  "sv, vt::color::ForegroundWhite);
+			renderer.DrawString(x, y++, std::format("{:>5.2f}ms", toMs(phaseResult.averageFrameTimings.renderTime)), vt::color::ForegroundBrightWhite);
+			renderer.DrawString(0, y, "    Average present time: "sv, vt::color::ForegroundWhite);
+			renderer.DrawString(x, y++, std::format("{:>5.2f}ms", toMs(phaseResult.averageFrameTimings.presentTime)), vt::color::ForegroundBrightYellow);
+			renderer.DrawString(0, y, "    Average idle time:    "sv, vt::color::ForegroundWhite);
+			renderer.DrawString(x, y++, std::format("{:>5.2f}ms", toMs(phaseResult.averageFrameTimings.idleTime)), vt::color::ForegroundBrightWhite);
+		};
+
+		VerifyElseCrash(m_phaseResults.size() >= 5);
+
+		++y;
+		renderer.DrawString(0, y++, "Test 1 - 10% of symbols change each frame"sv);
+		drawResults(m_phaseResults[0]);
+
+		++y;
+		renderer.DrawString(0, y++, "Test 2 - 30% of symbols change each frame"sv);
+		drawResults(m_phaseResults[1]);
+
+		++y;
+		renderer.DrawString(0, y++, "Test 3 - 50% of symbols change each frame"sv);
+		drawResults(m_phaseResults[2]);
+
+		++y;
+		renderer.DrawString(0, y++, "Test 4 - 70% of symbols change each frame"sv);
+		drawResults(m_phaseResults[3]);
+
+		++y;
+		renderer.DrawString(0, y++, "Test 5 - 90% of symbols change each frame"sv);
+		drawResults(m_phaseResults[4]);
 		return;
 	}
 
@@ -214,6 +312,20 @@ void Benchmark::Render(nu::console::ConsoleRenderer& renderer)
 	renderer.DrawString(x, y++, std::format("{:>5.2f}ms", GetEngine()->GetLastIdleTimeMs().count()), vt::color::ForegroundBrightWhite);
 }
 
-void Benchmark::OnWindowResize(uint16_t width, uint16_t height)
+void Benchmark::OnWindowResize(uint16_t /*width*/, uint16_t /*height*/)
 {
+	if (m_phase <= numPhases)
+	{
+		Restart();
+	}
+}
+
+bool Benchmark::OnKeyDown(nu::console::Key key)
+{
+	if (key == nu::console::Key::R)
+	{
+		Restart();
+		return true;
+	}
+	return false;
 }

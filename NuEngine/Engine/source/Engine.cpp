@@ -107,7 +107,7 @@ namespace engine
 			// Render FPS counter, if enabled
 			if (m_showFps)
 			{
-				int fps = static_cast<int>(std::round(1.f / m_lastFrameTime.count()));
+				int fps = static_cast<int>(std::round(1.f / m_lastFrameTimings.totalFrameTime.count()));
 				std::string fpsString = std::format("{} FPS", fps);
 				int x = std::max(0, m_renderSizeX - static_cast<int>(fpsString.size()) - 1);
 				int y = std::max(0, m_renderSizeY / 2 - 10);
@@ -142,11 +142,11 @@ namespace engine
 			idleTimer.Stop();
 			frameTimer.Stop();
 
-			m_lastFrameTime = frameTimer.ElapsedSeconds();
-			m_lastTickTime = tickTimer.ElapsedSeconds();
-			m_lastRenderTime = renderTimer.ElapsedSeconds();
-			m_lastPresentTime = presentTimer.ElapsedSeconds();
-			m_lastIdleTime = idleTimer.ElapsedSeconds();
+			m_lastFrameTimings.totalFrameTime = frameTimer.ElapsedSeconds();
+			m_lastFrameTimings.tickTime = tickTimer.ElapsedSeconds();
+			m_lastFrameTimings.renderTime = renderTimer.ElapsedSeconds();
+			m_lastFrameTimings.presentTime = presentTimer.ElapsedSeconds();
+			m_lastFrameTimings.idleTime = idleTimer.ElapsedSeconds();
 		}
 
 		game.EndPlay();

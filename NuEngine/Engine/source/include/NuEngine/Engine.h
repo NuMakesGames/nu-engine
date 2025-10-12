@@ -7,6 +7,15 @@ namespace nu
 {
 namespace engine
 {
+	struct FrameTimings
+	{
+		std::chrono::duration<double> totalFrameTime = std::chrono::duration<double>::zero();
+		std::chrono::duration<double> tickTime = std::chrono::duration<double>::zero();
+		std::chrono::duration<double> renderTime = std::chrono::duration<double>::zero();
+		std::chrono::duration<double> presentTime = std::chrono::duration<double>::zero();
+		std::chrono::duration<double> idleTime = std::chrono::duration<double>::zero();
+	};
+
 	class Engine : private nu::console::IKeyboardInputConsumer, private nu::console::IWindowResizeConsumer
 	{
 	public:
@@ -63,64 +72,70 @@ namespace engine
 			return m_targetFramesPerSecond;
 		}
 
+		// Returns the frame timings of the last frame
+		const FrameTimings& GetLastFrameTimings() const noexcept
+		{
+			return m_lastFrameTimings;
+		}
+
 		// Returns the total frame time of the last frame
 		std::chrono::duration<double> GetLastFrameTime() const noexcept
 		{
-			return m_lastFrameTime;
+			return m_lastFrameTimings.totalFrameTime;
 		}
 
 		// Returns the total frame time of the last frame in milliseconds
 		std::chrono::duration<double, std::milli> GetLastFrameTimeMs() const noexcept
 		{
-			return std::chrono::duration_cast<std::chrono::duration<double, std::milli>>(m_lastFrameTime);
+			return std::chrono::duration_cast<std::chrono::duration<double, std::milli>>(m_lastFrameTimings.totalFrameTime);
 		}
 
 		// Returns the time spent sleeping last frame
 		std::chrono::duration<double> GetLastTickTime() const noexcept
 		{
-			return m_lastTickTime;
+			return m_lastFrameTimings.tickTime;
 		}
 
 		// Returns the total frame time of the last frame in milliseconds
 		std::chrono::duration<double, std::milli> GetLastTickTimeMs() const noexcept
 		{
-			return std::chrono::duration_cast<std::chrono::duration<double, std::milli>>(m_lastTickTime);
+			return std::chrono::duration_cast<std::chrono::duration<double, std::milli>>(m_lastFrameTimings.tickTime);
 		}
 
 		// Returns the time spent sleeping last frame
 		std::chrono::duration<double> GetLastRenderTime() const noexcept
 		{
-			return m_lastRenderTime;
+			return m_lastFrameTimings.renderTime;
 		}
 
 		// Returns the total frame time of the last frame in milliseconds
 		std::chrono::duration<double, std::milli> GetLastRenderTimeMs() const noexcept
 		{
-			return std::chrono::duration_cast<std::chrono::duration<double, std::milli>>(m_lastRenderTime);
+			return std::chrono::duration_cast<std::chrono::duration<double, std::milli>>(m_lastFrameTimings.renderTime);
 		}
 
 		// Returns the time spent sleeping last frame
 		std::chrono::duration<double> GetLastPresentTime() const noexcept
 		{
-			return m_lastPresentTime;
+			return m_lastFrameTimings.presentTime;
 		}
 
 		// Returns the total frame time of the last frame in milliseconds
 		std::chrono::duration<double, std::milli> GetLastPresentTimeMs() const noexcept
 		{
-			return std::chrono::duration_cast<std::chrono::duration<double, std::milli>>(m_lastPresentTime);
+			return std::chrono::duration_cast<std::chrono::duration<double, std::milli>>(m_lastFrameTimings.presentTime);
 		}
 
 		// Returns the time spent sleeping last frame
 		std::chrono::duration<double> GetLastIdleTime() const noexcept
 		{
-			return m_lastIdleTime;
+			return m_lastFrameTimings.idleTime;
 		}
 
 		// Returns the total frame time of the last frame in milliseconds
 		std::chrono::duration<double, std::milli> GetLastIdleTimeMs() const noexcept
 		{
-			return std::chrono::duration_cast<std::chrono::duration<double, std::milli>>(m_lastIdleTime);
+			return std::chrono::duration_cast<std::chrono::duration<double, std::milli>>(m_lastFrameTimings.idleTime);
 		}
 
 	private:
@@ -138,12 +153,7 @@ namespace engine
 		uint16_t m_renderSizeX = 0;
 		uint16_t m_renderSizeY = 0;
 		uint16_t m_targetFramesPerSecond = 60;
-
-		std::chrono::duration<double> m_lastFrameTime = std::chrono::duration<double>::zero();
-		std::chrono::duration<double> m_lastTickTime = std::chrono::duration<double>::zero();
-		std::chrono::duration<double> m_lastRenderTime = std::chrono::duration<double>::zero();
-		std::chrono::duration<double> m_lastPresentTime = std::chrono::duration<double>::zero();
-		std::chrono::duration<double> m_lastIdleTime = std::chrono::duration<double>::zero();
+		FrameTimings m_lastFrameTimings;
 	};
 } // namespace engine
 } // namespace nu
