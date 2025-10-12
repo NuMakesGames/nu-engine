@@ -1,6 +1,7 @@
 ﻿#include "NuEngine/Engine.h"
 
 #include <chrono>
+#include <string_view>
 #include <thread>
 
 #include "NuEngine/Assertions.h"
@@ -14,6 +15,7 @@
 
 using namespace nu::console;
 using namespace std::chrono_literals;
+using namespace std::literals;
 
 namespace nu
 {
@@ -110,8 +112,53 @@ namespace engine
 				int fps = static_cast<int>(std::round(1.f / m_lastFrameTimings.totalFrameTime.count()));
 				std::string fpsString = std::format("{} FPS", fps);
 				int x = std::max(0, m_renderSizeX - static_cast<int>(fpsString.size()) - 1);
-				int y = std::max(0, m_renderSizeY / 2 - 10);
+
+				constexpr int yOffset = 3;
+				int y = std::max(0, m_renderSizeY / 4 - yOffset);
+
 				renderer.DrawString(x, y, fpsString, vt::color::ForegroundBrightCyan);
+			}
+
+			// Render frame timing stats, if enabled
+			if (m_showFrameTimings)
+			{
+				constexpr auto frameTimeLabel =   "Frame:   "sv;
+				constexpr auto tickTimeLabel =    "Tick:    "sv;
+				constexpr auto renderTimeLabel =  "Render:  "sv;
+				constexpr auto presentTimeLabel = "Present: "sv;
+				constexpr auto idleTimeLabel =    "Idle:    "sv;
+				constexpr auto labelLength = static_cast<uint16_t>(frameTimeLabel.size());
+
+				auto toMs = [](const auto& duration) { return std::chrono::duration_cast<std::chrono::duration<double, std::milli>>(duration).count(); };
+				auto frameTime = std::format("{:>5.2f}ms", toMs(m_lastFrameTimings.totalFrameTime));
+				auto tickTime = std::format("{:>5.2f}ms", toMs(m_lastFrameTimings.tickTime));
+				auto renderTime = std::format("{:>5.2f}ms", toMs(m_lastFrameTimings.renderTime));
+				auto presentTime = std::format("{:>5.2f}ms", toMs(m_lastFrameTimings.presentTime));
+				auto idleTime = std::format("{:>5.2f}ms", toMs(m_lastFrameTimings.idleTime));
+
+				int timingLength = static_cast<int>(std::max({ frameTime.size(), tickTime.size(), renderTime.size(), presentTime.size(), idleTime.size() }));
+				int x = std::max(0, m_renderSizeX - static_cast<int>(labelLength) - timingLength - 1);
+
+				constexpr int yOffset = 2;
+				int y = std::max(0, m_renderSizeY / 4 - yOffset);
+
+				renderer.DrawString(x, y, frameTimeLabel);
+				renderer.DrawString(x + labelLength, y, frameTime, vt::color::ForegroundBrightWhite);
+
+				auto tickColor = tickTime >= renderTime && tickTime >= presentTime ? vt::color::ForegroundBrightYellow : vt::color::ForegroundBrightWhite;
+				renderer.DrawString(x, ++y, tickTimeLabel);
+				renderer.DrawString(x + labelLength, y, tickTime, tickColor);
+
+				auto renderColor = renderTime >= tickTime && renderTime >= presentTime ? vt::color::ForegroundBrightYellow : vt::color::ForegroundBrightWhite;
+				renderer.DrawString(x, ++y, renderTimeLabel);
+				renderer.DrawString(x + labelLength, y, renderTime, renderColor);
+
+				auto presentColor = presentTime >= tickTime && presentTime >= renderTime ? vt::color::ForegroundBrightYellow : vt::color::ForegroundBrightWhite;
+				renderer.DrawString(x, ++y, presentTimeLabel);
+				renderer.DrawString(x + labelLength, y, presentTime, presentColor);
+
+				renderer.DrawString(x, ++y, idleTimeLabel);
+				renderer.DrawString(x + labelLength, y, idleTime, vt::color::ForegroundBrightWhite);
 			}
 
 			// Present to the console
@@ -213,6 +260,12 @@ namespace engine
 		if (line == u8"fps")
 		{
 			m_showFps = !m_showFps;
+			return true;
+		}
+
+		if (line == u8"stats" || line == u8"timings")
+		{
+			m_showFrameTimings = !m_showFrameTimings;
 			return true;
 		}
 

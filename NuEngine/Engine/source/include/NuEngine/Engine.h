@@ -28,16 +28,16 @@ namespace engine
 		void StopGame();
 
 		// Callback for IWindowResizeConsumer when the window is resized
-		virtual void OnWindowResize(uint16_t x, uint16_t y);
+		void OnWindowResize(uint16_t x, uint16_t y) override;
 
 		// Callback for IKeyboardInputConsumer when a key is pressed
-		virtual bool OnKeyDown(nu::console::Key key);
+		bool OnKeyDown(nu::console::Key key) override;
 
 		// Callback for IKeyboardInputConsumer when a key is released
-		virtual bool OnKeyUp(nu::console::Key key);
+		bool OnKeyUp(nu::console::Key key) override;
 
 		// Callback for IKeyboardInputConsumer when a line of input is available
-		virtual bool OnLineInput(const std::u8string& line);
+		bool OnLineInput(const std::u8string& line) override;
 
 		// Desired size for the renderer; called when the window is resized
 		void SetDesiredRendererSize(uint16_t x, uint16_t y) noexcept;
@@ -150,6 +150,7 @@ namespace engine
 		bool m_shouldStopGame = false;
 		bool m_isCommanderEnabled = false;
 		bool m_showFps = false;
+		bool m_showFrameTimings = false;
 		uint16_t m_renderSizeX = 0;
 		uint16_t m_renderSizeY = 0;
 		uint16_t m_targetFramesPerSecond = 60;

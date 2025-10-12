@@ -6,6 +6,6 @@
 int main()
 {
 	nu::engine::Engine engine;
-	Benchmark game;
+	Snowflakes game;
 	engine.StartGame(game);
 }

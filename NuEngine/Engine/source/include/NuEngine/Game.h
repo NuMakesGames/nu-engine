@@ -16,10 +16,14 @@ namespace engine
 		Game();
 
 		// Called when the game is starting
-		virtual void BeginPlay() = 0;
+		virtual void BeginPlay()
+		{
+		}
 
 		// Called when the game is ending
-		virtual void EndPlay() = 0;
+		virtual void EndPlay()
+		{
+		}
 
 		// Called each frame to update the game simulation
 		virtual void Tick(std::chrono::duration<double> deltaTime) = 0;
@@ -27,26 +31,26 @@ namespace engine
 		// Called each frame to render the game
 		virtual void Render(nu::console::ConsoleRenderer& renderer) = 0;
 
-		// Optional callback when key is pressed
-		virtual bool OnKeyDown(nu::console::Key key)
+		// Called when a key is pressed in Keys input mode
+		bool OnKeyDown(nu::console::Key key) override
 		{
 			return false;
 		}
 
-		// Optional callback when key is released
-		virtual bool OnKeyUp(nu::console::Key key)
+		// Called when a key is released  in Keys input mode
+		bool OnKeyUp(nu::console::Key key) override
 		{
 			return false;
 		}
 
-		// Optional callback when a line of text is completed in Lines input mode
-		virtual bool OnLineInput(const std::u8string& line)
+		// Called when a line of text is completed in Lines input mode
+		bool OnLineInput(const std::u8string& line) override
 		{
 			return false;
 		}
 
-		// Optional callback when the window is resized
-		virtual void OnWindowResize(uint16_t width, uint16_t height)
+		// Called when the window is resized
+		void OnWindowResize(uint16_t width, uint16_t height) override
 		{
 		}
 
@@ -68,6 +72,7 @@ namespace engine
 		// The engine running the game
 		class Engine* m_engine;
 
+		// Allow the engine to set/clear itself on the game
 		friend class Engine;
 	};
 } // namespace engine
