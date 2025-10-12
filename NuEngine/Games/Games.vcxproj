@@ -82,10 +82,12 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="source\Benchmark.cpp" />
-    <ClCompile Include="source\Snake.cpp" />
+    <ClCompile Include="source\Main.cpp" />
+    <ClCompile Include="source\Snowflakes.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="source\Benchmark.h" />
+    <ClInclude Include="source\Snowflakes.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
