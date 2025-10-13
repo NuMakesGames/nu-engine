@@ -5,7 +5,8 @@
 
 int main()
 {
+	std::ios_base::sync_with_stdio(false);
 	nu::engine::Engine engine;
-	Snowflakes game;
+	Benchmark game;
 	engine.StartGame(game);
 }

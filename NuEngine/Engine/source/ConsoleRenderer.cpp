@@ -157,32 +157,36 @@ namespace console
 			if (cursorX != x || cursorY != y || i == 0)
 			{
 				std::string setCursorPosition = vt::cursor::SetPosition(x, y);
-				builder += std::u8string{ setCursorPosition.begin(), setCursorPosition.end() };
+				builder += std::u8string{ setCursorPosition.cbegin(), setCursorPosition.cend() };
 				cursorX = x;
 				cursorY = y;
 			}
 
 			if (foregroundColor != backGlyph.foregroundColor || i == 0)
 			{
-				builder += std::u8string{ backGlyph.foregroundColor.begin(), backGlyph.foregroundColor.end() };
+				builder += std::u8string{ backGlyph.foregroundColor.cbegin(), backGlyph.foregroundColor.cend() };
 				foregroundColor = backGlyph.foregroundColor;
 			}
 
 			if (backgroundColor != backGlyph.backgroundColor || i == 0)
 			{
-				builder += std::u8string{ backGlyph.backgroundColor.begin(), backGlyph.backgroundColor.end() };
+				builder += std::u8string{ backGlyph.backgroundColor.cbegin(), backGlyph.backgroundColor.cend() };
 				backgroundColor = backGlyph.backgroundColor;
 			}
 
 			builder += backGlyph.character;
-			++cursorX;
+			if (++cursorX > m_sizeX)
+			{
+				++cursorY;
+				cursorX = 1;
+			}
 		}
 		m_shouldDrawAllGlyphs = false;
 
 		// Flush to make sure the console actually updates
 		if (!builder.empty())
 		{
-			std::cout << std::string(builder.begin(), builder.end()) << vt::cursor::HideCursor;
+			std::cout << std::string(builder.cbegin(), builder.cend()) << vt::cursor::HideCursor;
 			std::cout.flush();
 		}
 

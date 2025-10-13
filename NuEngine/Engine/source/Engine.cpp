@@ -111,7 +111,7 @@ namespace engine
 			{
 				int fps = static_cast<int>(std::round(1.f / m_lastFrameTimings.totalFrameTime.count()));
 				std::string fpsString = std::format("{} FPS", fps);
-				int x = std::max(0, m_renderSizeX - static_cast<int>(fpsString.size()) - 1);
+				int x = std::max(0, m_renderSizeX - static_cast<int>(fpsString.size()));
 
 				constexpr int yOffset = 3;
 				int y = std::max(0, m_renderSizeY / 4 - yOffset);
@@ -137,7 +137,7 @@ namespace engine
 				auto idleTime = std::format("{:>5.2f}ms", toMs(m_lastFrameTimings.idleTime));
 
 				int timingLength = static_cast<int>(std::max({ frameTime.size(), tickTime.size(), renderTime.size(), presentTime.size(), idleTime.size() }));
-				int x = std::max(0, m_renderSizeX - static_cast<int>(labelLength) - timingLength - 1);
+				int x = std::max(0, m_renderSizeX - static_cast<int>(labelLength) - timingLength);
 
 				constexpr int yOffset = 2;
 				int y = std::max(0, m_renderSizeY / 4 - yOffset);

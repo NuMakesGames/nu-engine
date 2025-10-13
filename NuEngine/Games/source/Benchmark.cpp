@@ -78,13 +78,13 @@ const std::array<std::string, static_cast<size_t>(Color::Size)> colors{
 
 void Benchmark::BeginPlay()
 {
-	// Disable frame rate limit
-	GetEngine()->SetTargetFramesPerSecond(0);
 	Restart();
 }
 
 void Benchmark::Restart()
 {
+	GetEngine()->SetTargetFramesPerSecond(60);
+
 	auto [width, height] = GetEngine()->GetRendererSize();
 	m_noise.resize(width * height);
 
@@ -135,6 +135,17 @@ void Benchmark::Tick(std::chrono::duration<double> deltaTime)
 		}
 		m_noise = m_noiseOriginal;
 		++m_phase;
+
+		if (m_phase > 0 && m_phase <= numPhases)
+		{
+			// Disable framerate limit during test phases
+			GetEngine()->SetTargetFramesPerSecond(0);
+		}
+		else
+		{
+			// Enable framerate limit before and after the test phases
+			GetEngine()->SetTargetFramesPerSecond(60);
+		}
 	};
 
 	if (m_phase == 0)
