@@ -8,7 +8,6 @@
 using namespace std::literals;
 
 constexpr auto numFramesPerPhase = 2000;
-constexpr auto numPhases = 5;
 
 enum class Color : uint8_t
 {
@@ -76,6 +75,14 @@ const std::array<std::string, static_cast<size_t>(Color::Size)> colors{
 	vt::color::ForegroundRGB(0, 0, 255),
 };
 
+Benchmark::Benchmark()
+{
+	m_phaseConfigs = {
+		PhaseConfig{ 10, false }, PhaseConfig{ 30, false }, PhaseConfig{ 50, false }, PhaseConfig{ 70, false }, PhaseConfig{ 90, false },
+		PhaseConfig{ 10, true },  PhaseConfig{ 30, true },  PhaseConfig{ 50, true },  PhaseConfig{ 70, true },  PhaseConfig{ 90, true },
+	};
+}
+
 void Benchmark::BeginPlay()
 {
 	Restart();
@@ -103,12 +110,11 @@ void Benchmark::Restart()
 	// Reset state
 	m_accruedTime = 0us;
 	m_currentFrame = 0;
-	m_changePercent = 10;
-	m_phase = 0;
+	m_phase = -1;
 
 	// Invalidate any frame timings
 	m_phaseFrameTimings.clear();
-	m_phaseFrameTimings.resize(numPhases);
+	m_phaseFrameTimings.resize(m_phaseConfigs.size());
 	for (auto& frameTimings : m_phaseFrameTimings)
 	{
 		frameTimings.clear();
@@ -129,14 +135,10 @@ void Benchmark::Tick(std::chrono::duration<double> deltaTime)
 	{
 		m_accruedTime = 0us;
 		m_currentFrame = 0;
-		if (m_phase != 0)
-		{
-			m_changePercent += 20;
-		}
 		m_noise = m_noiseOriginal;
 		++m_phase;
 
-		if (m_phase > 0 && m_phase <= numPhases)
+		if (m_phase >= 0 && m_phase < m_phaseConfigs.size())
 		{
 			// Disable framerate limit during test phases
 			GetEngine()->SetTargetFramesPerSecond(0);
@@ -148,7 +150,7 @@ void Benchmark::Tick(std::chrono::duration<double> deltaTime)
 		}
 	};
 
-	if (m_phase == 0)
+	if (m_phase == -1)
 	{
 		m_accruedTime += std::chrono::duration_cast<std::chrono::microseconds>(deltaTime);
 		if (m_accruedTime < 3s)
@@ -159,11 +161,11 @@ void Benchmark::Tick(std::chrono::duration<double> deltaTime)
 		incrementPhase();
 	}
 
-	if (m_phase >= numPhases + 1)
+	if (m_phase == m_phaseConfigs.size())
 	{
 		if (m_phaseResults.empty())
 		{
-			m_phaseResults.resize(numPhases);
+			m_phaseResults.resize(m_phaseConfigs.size());
 		}
 
 		VerifyElseCrash(m_phaseFrameTimings.size() == m_phaseResults.size());
@@ -191,13 +193,13 @@ void Benchmark::Tick(std::chrono::duration<double> deltaTime)
 
 	if (m_currentFrame != 0)
 	{
-		m_phaseFrameTimings[m_phase - 1].emplace_back(GetEngine()->GetLastFrameTimings());
+		m_phaseFrameTimings[m_phase].emplace_back(GetEngine()->GetLastFrameTimings());
 	}
 
 	++m_currentFrame;
 	for (auto i = 0u; i < m_noise.size(); ++i)
 	{
-		if ((m_currentFrame + i) % 100 >= m_changePercent)
+		if ((m_currentFrame + i) % 100 >= m_phaseConfigs[m_phase].changePercent)
 		{
 			// Don't change the current noise entry
 			continue;
@@ -221,15 +223,21 @@ void Benchmark::Tick(std::chrono::duration<double> deltaTime)
 
 void Benchmark::Render(nu::console::ConsoleRenderer& renderer)
 {
-	if (m_phase == 0)
+	if (m_phase == -1)
 	{
 		uint16_t y = 0;
-		renderer.DrawString(0, y++, "Benchmark will simulate/render frames of random symbols and colors, 5 times:"sv);
-		renderer.DrawString(0, y++, "    Test 1 - 10% of symbols change each frame"sv);
-		renderer.DrawString(0, y++, "    Test 2 - 30% of symbols change each frame"sv);
-		renderer.DrawString(0, y++, "    Test 3 - 50% of symbols change each frame"sv);
-		renderer.DrawString(0, y++, "    Test 4 - 70% of symbols change each frame"sv);
-		renderer.DrawString(0, y++, "    Test 5 - 90% of symbols change each frame"sv);
+		renderer.DrawString(0, y++, "Benchmark will simulate/render frames of random symbols and colors:"sv);
+		for (int i = 0; i < m_phaseConfigs.size(); ++i)
+		{
+			renderer.DrawString(
+				0,
+				y++,
+				std::format(
+					"    Test {:>2} - {}% of symbols {}change each frame"sv,
+					i + 1,
+					m_phaseConfigs[i].changePercent,
+					m_phaseConfigs[i].renderColor ? "and colors " : ""));
+		}
 		renderer.DrawString(
 			0,
 			++y,
@@ -238,7 +246,7 @@ void Benchmark::Render(nu::console::ConsoleRenderer& renderer)
 		return;
 	}
 
-	if (m_phase >= numPhases + 1)
+	if (m_phase == m_phaseConfigs.size())
 	{
 		if (m_phaseResults.empty())
 		{
@@ -248,45 +256,58 @@ void Benchmark::Render(nu::console::ConsoleRenderer& renderer)
 		uint16_t y = 0;
 		renderer.DrawString(0, y++, "Benchmark complete."sv);
 
-		auto drawResults = [&y, &renderer](const PhaseResult& phaseResult)
+		auto drawResults = [&y, &renderer](uint16_t x, const PhaseResult& phaseResult)
 		{
 			auto toMs = [](const auto& duration) { return std::chrono::duration_cast<std::chrono::duration<double, std::milli>>(duration).count(); };
-			constexpr auto x = ("    Average present time: "sv).size();
-			renderer.DrawString(0, y, "    Total frames: "sv, vt::color::ForegroundWhite);
-			renderer.DrawString(x, y++, std::format("{:>7}", phaseResult.frames), vt::color::ForegroundBrightWhite);
-			renderer.DrawString(0, y, "    Average frame time:   "sv, vt::color::ForegroundWhite);
-			renderer.DrawString(x, y++, std::format("{:>5.2f}ms", toMs(phaseResult.averageFrameTimings.totalFrameTime)), vt::color::ForegroundBrightWhite);
-			renderer.DrawString(0, y, "    Average tick time:    "sv, vt::color::ForegroundWhite);
-			renderer.DrawString(x, y++, std::format("{:>5.2f}ms", toMs(phaseResult.averageFrameTimings.tickTime)), vt::color::ForegroundBrightWhite);
-			renderer.DrawString(0, y, "    Average render time:  "sv, vt::color::ForegroundWhite);
-			renderer.DrawString(x, y++, std::format("{:>5.2f}ms", toMs(phaseResult.averageFrameTimings.renderTime)), vt::color::ForegroundBrightWhite);
-			renderer.DrawString(0, y, "    Average present time: "sv, vt::color::ForegroundWhite);
-			renderer.DrawString(x, y++, std::format("{:>5.2f}ms", toMs(phaseResult.averageFrameTimings.presentTime)), vt::color::ForegroundBrightYellow);
-			renderer.DrawString(0, y, "    Average idle time:    "sv, vt::color::ForegroundWhite);
-			renderer.DrawString(x, y++, std::format("{:>5.2f}ms", toMs(phaseResult.averageFrameTimings.idleTime)), vt::color::ForegroundBrightWhite);
+			constexpr auto x2 = ("    Average present time: "sv).size();
+			renderer.DrawString(x, y, "    Total frames: "sv, vt::color::ForegroundWhite);
+			renderer.DrawString(x + x2, y++, std::format("{:>7}", phaseResult.frames), vt::color::ForegroundBrightWhite);
+			renderer.DrawString(x, y, "    Average frame time:   "sv, vt::color::ForegroundWhite);
+			renderer.DrawString(x + x2, y++, std::format("{:>5.2f}ms", toMs(phaseResult.averageFrameTimings.totalFrameTime)), vt::color::ForegroundBrightWhite);
+			renderer.DrawString(x, y, "    Average tick time:    "sv, vt::color::ForegroundWhite);
+			renderer.DrawString(x + x2, y++, std::format("{:>5.2f}ms", toMs(phaseResult.averageFrameTimings.tickTime)), vt::color::ForegroundBrightWhite);
+			renderer.DrawString(x, y, "    Average render time:  "sv, vt::color::ForegroundWhite);
+			renderer.DrawString(x + x2, y++, std::format("{:>5.2f}ms", toMs(phaseResult.averageFrameTimings.renderTime)), vt::color::ForegroundBrightWhite);
+			renderer.DrawString(x, y, "    Average present time: "sv, vt::color::ForegroundWhite);
+			renderer.DrawString(x + x2, y++, std::format("{:>5.2f}ms", toMs(phaseResult.averageFrameTimings.presentTime)), vt::color::ForegroundBrightYellow);
+			renderer.DrawString(x, y, "    Average idle time:    "sv, vt::color::ForegroundWhite);
+			renderer.DrawString(x + x2, y++, std::format("{:>5.2f}ms", toMs(phaseResult.averageFrameTimings.idleTime)), vt::color::ForegroundBrightWhite);
 		};
 
-		VerifyElseCrash(m_phaseResults.size() >= 5);
+		constexpr auto resultsPerColumn = 5;
+		VerifyElseCrash(m_phaseResults.size() <= 2 * resultsPerColumn);
 
-		++y;
-		renderer.DrawString(0, y++, "Test 1 - 10% of symbols change each frame"sv);
-		drawResults(m_phaseResults[0]);
+		uint16_t yStart = y;
+		for (int i = 0; i < m_phaseConfigs.size() && i < resultsPerColumn; ++i)
+		{
+			++y;
+			renderer.DrawString(
+				0,
+				y++,
+				std::format(
+					"Test {} - {}% of symbols {}change each frame"sv,
+					i + 1,
+					m_phaseConfigs[i].changePercent,
+					m_phaseConfigs[i].renderColor ? "and colors " : ""));
+			drawResults(0, m_phaseResults[i]);
+		}
 
-		++y;
-		renderer.DrawString(0, y++, "Test 2 - 30% of symbols change each frame"sv);
-		drawResults(m_phaseResults[1]);
-
-		++y;
-		renderer.DrawString(0, y++, "Test 3 - 50% of symbols change each frame"sv);
-		drawResults(m_phaseResults[2]);
-
-		++y;
-		renderer.DrawString(0, y++, "Test 4 - 70% of symbols change each frame"sv);
-		drawResults(m_phaseResults[3]);
-
-		++y;
-		renderer.DrawString(0, y++, "Test 5 - 90% of symbols change each frame"sv);
-		drawResults(m_phaseResults[4]);
+		y = yStart;
+		for (int i = resultsPerColumn; i < m_phaseConfigs.size(); ++i)
+		{
+			constexpr auto labelLen = "Test  5- 90% of symbols change each frame"sv.size();
+			auto x = std::max(static_cast<uint16_t>(labelLen) + 4, renderer.GetWidth() / 2);
+			++y;
+			renderer.DrawString(
+				x,
+				y++,
+				std::format(
+					"Test {} - {}% of symbols {}change each frame"sv,
+					i + 1,
+					m_phaseConfigs[i].changePercent,
+					m_phaseConfigs[i].renderColor ? "and colors " : ""));
+			drawResults(x, m_phaseResults[i]);
+		}
 		return;
 	}
 
@@ -294,15 +315,15 @@ void Benchmark::Render(nu::console::ConsoleRenderer& renderer)
 	for (auto i = 0u; i < m_noise.size(); ++i)
 	{
 		const auto& [c, col] = m_noise[i];
-		renderer.DrawChar(i % width, i / width, c, colors[col]);
+		renderer.DrawChar(i % width, i / width, c, m_phaseConfigs[m_phase].renderColor ? colors[col] : vt::color::ForegroundWhite);
 	}
 
 	uint16_t y = 0;
 	constexpr auto x = ("Present time: "sv).size();
 	renderer.DrawString(0, y, "Test phase:   "sv, vt::color::ForegroundWhite);
-	renderer.DrawString(x, y++, std::format("{:>7}", m_phase), vt::color::ForegroundBrightYellow);
+	renderer.DrawString(x, y++, std::format("{:>7}", m_phase + 1), vt::color::ForegroundBrightYellow);
 	renderer.DrawString(0, y, "Entropy:      "sv, vt::color::ForegroundWhite);
-	renderer.DrawString(x, y++, std::format("{:>6}%", m_changePercent), vt::color::ForegroundBrightBlue);
+	renderer.DrawString(x, y++, std::format("{:>6}%", m_phaseConfigs[m_phase].changePercent), vt::color::ForegroundBrightBlue);
 	renderer.DrawString(0, y, "Frame:        "sv, vt::color::ForegroundWhite);
 	renderer.DrawString(x, y++, std::format("{:>7}", m_currentFrame), vt::color::ForegroundBrightCyan);
 	renderer.DrawString(0, y, "FPS:          "sv, vt::color::ForegroundWhite);
@@ -321,7 +342,7 @@ void Benchmark::Render(nu::console::ConsoleRenderer& renderer)
 
 void Benchmark::OnWindowResize(uint16_t /*width*/, uint16_t /*height*/)
 {
-	if (m_phase <= numPhases)
+	if (m_phase < m_phaseConfigs.size())
 	{
 		Restart();
 	}

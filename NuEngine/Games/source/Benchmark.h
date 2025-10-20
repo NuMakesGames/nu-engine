@@ -8,7 +8,7 @@
 class Benchmark : public nu::engine::Game
 {
 public:
-	Benchmark() = default;
+	Benchmark();
 
 	void BeginPlay() override;
 	void EndPlay() override;
@@ -31,13 +31,18 @@ private:
 	std::mt19937 m_rng{ std::random_device{}() };
 
 	uint64_t m_currentFrame = 0;
-	uint8_t m_changePercent = 10;
-	uint8_t m_phase = 0;
+	int8_t m_phase = -1;
 
 	std::chrono::microseconds m_accruedTime;
 
 	std::vector<std::pair<char, uint8_t>> m_noise;
 	std::vector<std::pair<char, uint8_t>> m_noiseOriginal;
+
+	struct PhaseConfig
+	{
+		uint8_t changePercent = 10;
+		bool renderColor = false;
+	};
 
 	struct PhaseResult
 	{
@@ -46,5 +51,6 @@ private:
 	};
 
 	std::vector<std::vector<nu::engine::FrameTimings>> m_phaseFrameTimings;
+	std::vector<PhaseConfig> m_phaseConfigs;
 	std::vector<PhaseResult> m_phaseResults;
 };
