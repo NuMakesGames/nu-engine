@@ -46,6 +46,14 @@ namespace console
 					continue;
 				}
 
+				if (ch == 0xE0)
+				{
+					m_currentLine += ch;
+					m_currentLine += _getwch(); // Read the extended key code
+					m_isCurrentLineUtf8Valid = false;
+					continue;
+				}
+
 				if (ch == VK_RETURN)
 				{
 					for (auto* consumer : m_keyConsumers)
@@ -182,24 +190,89 @@ namespace console
 			return m_currentLineUtf8;
 		}
 
+		// Process control characters if present
+		std::wstring processedLine;
+		size_t cursor = 0;
+		for (size_t i = 0; i < m_currentLine.size(); ++i)
+		{
+			wchar_t ch = m_currentLine[i];
+			switch (ch)
+			{
+				case '\b': // Backspace
+
+					if (cursor > 0)
+					{
+						processedLine.erase(cursor - 1 /*Off*/, 1 /*Count*/);
+						--cursor;
+					}
+					break;
+				case 0xE0: // Extended key
+					if (i < m_currentLine.size() - 1)
+					{
+						switch (m_currentLine[i + 1])
+						{
+							case 0x4B: // Left arrow
+								if (cursor > 0)
+								{
+									--cursor;
+								}
+								break;
+							case 0x4D: // Right arrow
+								if (cursor < processedLine.size())
+								{
+									++cursor;
+								}
+								break;
+							case 0x47: // Home
+								cursor = 0;
+								break;
+							case 0x4F: // End
+								cursor = processedLine.size();
+								break;
+							case 0x53: // Delete
+								if (!processedLine.empty() && cursor < processedLine.size())
+								{
+									processedLine.erase(cursor /*Off*/, 1 /*Count*/);
+								}
+								break;
+							default:
+								break;
+						}
+						++i;
+					}
+					break;
+				default:
+					if (cursor == processedLine.size())
+					{
+						processedLine += ch;
+					}
+					else
+					{
+						processedLine.insert(cursor /*Off*/, 1 /*Count*/, ch);
+					}
+					++cursor;
+					break;
+			}
+		}
+
+		// Check if there's any characters left to convert
 		m_currentLineUtf8.clear();
-		if (m_currentLine.empty())
+		if (processedLine.empty())
 		{
 			m_isCurrentLineUtf8Valid = true;
 			return m_currentLineUtf8;
 		}
 
 		// Convert from UTF-16 wide string to UTF-8
-		int requiredSize = ::WideCharToMultiByte(
-			CP_UTF8, 0, m_currentLine.c_str(), static_cast<int>(m_currentLine.size()), nullptr, 0, nullptr, nullptr);
+		int requiredSize = ::WideCharToMultiByte(CP_UTF8, 0, processedLine.c_str(), static_cast<int>(processedLine.size()), nullptr, 0, nullptr, nullptr);
 		VerifyElseCrash(requiredSize > 0);
 
 		m_currentLineUtf8.resize(requiredSize);
 		::WideCharToMultiByte(
 			CP_UTF8,
 			0,
-			m_currentLine.c_str(),
-			static_cast<int>(m_currentLine.size()),
+			processedLine.c_str(),
+			static_cast<int>(processedLine.size()),
 			reinterpret_cast<char*>(m_currentLineUtf8.data()),
 			requiredSize,
 			nullptr,
