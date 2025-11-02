@@ -25,8 +25,12 @@ namespace console
 		// Destructor restores original console state
 		~ConsoleRenderer();
 
-		// Clears the current buffer
-		void Clear();
+		// Clears the current buffer, filling it with the specified character.
+		// When incremental drawing is disabled, clear to defaults is performed implicitly for any position that isn't drawn to.
+		void Clear(
+			char character = ' ',
+			std::string_view foregroundColor = vt::color::ForegroundWhite,
+			std::string_view backgroundColor = vt::color::BackgroundBlack);
 
 		// Draws a character to the provided position
 		bool DrawChar(
@@ -46,7 +50,7 @@ namespace console
 			std::string_view backgroundColor = vt::color::BackgroundBlack)
 		{
 			VerifyElseCrash(x >= 0 && x <= std::numeric_limits<uint16_t>::max());
-			VerifyElseCrash(y >= 0 && y<= std::numeric_limits<uint16_t>::max());
+			VerifyElseCrash(y >= 0 && y <= std::numeric_limits<uint16_t>::max());
 			return DrawChar(static_cast<uint16_t>(x), static_cast<uint16_t>(y), character, foregroundColor, backgroundColor);
 		}
 
@@ -272,11 +276,15 @@ namespace console
 		// Stores character and color used to render a position in the console buffer
 		struct Glyph
 		{
-			std::u8string character = std::u8string{ ' ' };
+			std::u8string character = u8" ";
 			std::string foregroundColor = std::string(vt::color::ForegroundWhite);
 			std::string backgroundColor = std::string(vt::color::BackgroundBlack);
+			uint64_t lastDrawnId = 0;
 
-			auto operator<=>(const Glyph&) const = default;
+			bool operator==(const Glyph& other) const
+			{
+				return character == other.character && foregroundColor == other.foregroundColor && backgroundColor == other.backgroundColor;
+			}
 		};
 
 	private:
@@ -290,7 +298,7 @@ namespace console
 		std::pair<std::u8string, std::u8string_view> ReadNextU8Char(std::u8string_view data);
 
 	private:
-		// True if the buffers were resized since last present
+		// True if the buffers were resized since last Present
 		bool m_shouldDrawAllGlyphs = true;
 
 		// True if the front buffer should be copied to the back buffer after Present
@@ -302,11 +310,17 @@ namespace console
 		// Vertical size
 		uint16_t m_sizeY;
 
-		// Buffers drawn to by Draw functions. Rendered to console on Present.
+		// Buffers drawn to by Draw functions. Rendered to console on Present
 		std::array<std::vector<Glyph>, 2> m_buffers;
 
 		// Current buffer being drawn to. Flips on Present.
 		size_t m_currentBufferIndex = 0;
+
+		// Builder used when presenting; reused to avoid allocations on each Present call
+		std::string m_builder;
+
+		// Counter to track how long ago a glyph was drawn
+		uint64_t m_currentPresentId = 0;
 
 		// Console configuration at construction. Restored at destruction.
 		CachedConsoleState m_cachedConsoleState;

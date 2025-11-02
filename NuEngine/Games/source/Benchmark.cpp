@@ -7,7 +7,7 @@
 
 using namespace std::literals;
 
-constexpr auto numFramesPerPhase = 2000;
+constexpr auto numFramesPerPhase = 500;
 
 enum class Color : uint8_t
 {
@@ -94,6 +94,8 @@ void Benchmark::Restart()
 
 	auto [width, height] = GetEngine()->GetRendererSize();
 	m_noise.resize(width * height);
+	m_width = width;
+	m_height = height;
 
 	// Seed noise with random characters and colors
 	std::uniform_int_distribution charDistribution{ static_cast<int>('0'), static_cast<int>('z') };
@@ -226,14 +228,17 @@ void Benchmark::Render(nu::console::ConsoleRenderer& renderer)
 	if (m_phase == -1)
 	{
 		uint16_t y = 0;
-		renderer.DrawString(0, y++, "Benchmark will simulate/render frames of random symbols and colors:"sv);
+		auto charactersLabel = std::format("{}x{}"sv, m_width, m_height);
+		renderer.DrawString(0, y, charactersLabel, vt::color::ForegroundBrightCyan);
+		renderer.DrawString(charactersLabel.size(), y++, " characters rendered each frame."sv);
+		renderer.DrawString(0, y++, std::format("Benchmark will simulate/render {} frames of random symbols and colors:"sv, numFramesPerPhase));
 		for (int i = 0; i < m_phaseConfigs.size(); ++i)
 		{
 			renderer.DrawString(
 				0,
 				y++,
 				std::format(
-					"    Test {:>2} - {}% of symbols {}change each frame"sv,
+					"    Test phase {:>2} - {}% of symbols {}change each frame"sv,
 					i + 1,
 					m_phaseConfigs[i].changePercent,
 					m_phaseConfigs[i].renderColor ? "and colors " : ""));
@@ -255,6 +260,9 @@ void Benchmark::Render(nu::console::ConsoleRenderer& renderer)
 
 		uint16_t y = 0;
 		renderer.DrawString(0, y++, "Benchmark complete."sv);
+		auto charactersLabel = std::format("{}x{}"sv, m_width, m_height);
+		renderer.DrawString(0, y, charactersLabel, vt::color::ForegroundBrightCyan);
+		renderer.DrawString(charactersLabel.size(), y++, " characters rendered each frame."sv);
 
 		auto drawResults = [&y, &renderer](uint16_t x, const PhaseResult& phaseResult)
 		{

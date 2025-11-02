@@ -90,7 +90,6 @@ namespace engine
 
 			// Draw the game
 			renderTimer.Restart();
-			renderer.Clear();
 			game.Render(renderer);
 			renderTimer.Stop();
 

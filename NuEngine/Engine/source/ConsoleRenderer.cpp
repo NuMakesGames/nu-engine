@@ -41,17 +41,16 @@ namespace console
 		RestoreConsoleState(m_cachedConsoleState);
 	}
 
-	void ConsoleRenderer::Clear()
+	void ConsoleRenderer::Clear(char character, std::string_view foregroundColor, std::string_view backgroundColor)
 	{
-		std::ranges::fill(GetBackBuffer(), Glyph{});
+		Glyph glyph{ .character = { static_cast<char8_t>(character) },
+			         .foregroundColor = std::string(foregroundColor),
+			         .backgroundColor = std::string(backgroundColor),
+			         .lastDrawnId = m_currentPresentId };
+		std::ranges::fill(GetBackBuffer(), glyph);
 	}
 
-	bool ConsoleRenderer::DrawChar(
-		uint16_t x,
-		uint16_t y,
-		char character,
-		std::string_view foregroundColor,
-		std::string_view backgroundColor)
+	bool ConsoleRenderer::DrawChar(uint16_t x, uint16_t y, char character, std::string_view foregroundColor, std::string_view backgroundColor)
 	{
 		if (x >= m_sizeX || y >= m_sizeY)
 		{
@@ -62,15 +61,11 @@ namespace console
 		glyph.character = character;
 		glyph.foregroundColor.assign(foregroundColor);
 		glyph.backgroundColor.assign(backgroundColor);
+		glyph.lastDrawnId = m_currentPresentId;
 		return true;
 	}
 
-	bool ConsoleRenderer::DrawU8Char(
-		uint16_t x,
-		uint16_t y,
-		std::u8string_view character,
-		std::string_view foregroundColor,
-		std::string_view backgroundColor)
+	bool ConsoleRenderer::DrawU8Char(uint16_t x, uint16_t y, std::u8string_view character, std::string_view foregroundColor, std::string_view backgroundColor)
 	{
 		if (x >= m_sizeX || y >= m_sizeY)
 		{
@@ -84,15 +79,11 @@ namespace console
 		glyph.character = extractedCharacter;
 		glyph.foregroundColor.assign(foregroundColor);
 		glyph.backgroundColor.assign(backgroundColor);
+		glyph.lastDrawnId = m_currentPresentId;
 		return true;
 	}
 
-	bool ConsoleRenderer::DrawString(
-		uint16_t x,
-		uint16_t y,
-		std::string_view text,
-		std::string_view foregroundColor,
-		std::string_view backgroundColor)
+	bool ConsoleRenderer::DrawString(uint16_t x, uint16_t y, std::string_view text, std::string_view foregroundColor, std::string_view backgroundColor)
 	{
 		if (x >= m_sizeX || y >= m_sizeY)
 		{
@@ -110,12 +101,7 @@ namespace console
 		return result;
 	}
 
-	bool ConsoleRenderer::DrawU8String(
-		uint16_t x,
-		uint16_t y,
-		std::u8string_view text,
-		std::string_view foregroundColor,
-		std::string_view backgroundColor)
+	bool ConsoleRenderer::DrawU8String(uint16_t x, uint16_t y, std::u8string_view text, std::string_view foregroundColor, std::string_view backgroundColor)
 	{
 		bool result = true;
 		auto [extractedCharacter, remainingView] = ReadNextU8Char(text);
@@ -125,7 +111,6 @@ namespace console
 			std::tie(extractedCharacter, remainingView) = ReadNextU8Char(remainingView);
 			++x;
 		}
-
 		return result;
 	}
 
@@ -136,15 +121,26 @@ namespace console
 		auto& frontBuffer = GetFrontBuffer();
 		VerifyElseCrash(backBuffer.size() == frontBuffer.size());
 
+		// Glyph used to clear positions that were not drawn to this frame
+		auto clearGlyph = Glyph{};
+		clearGlyph.lastDrawnId = m_currentPresentId;
+
 		// Update any positions on the console that have changed
-		// Don't send straight to std::cout to avoid the update being visibile in an inconsistent state
-		std::u8string builder;
+		// Don't send straight to std::cout to avoid the update being visible in an inconsistent state
+		m_builder.clear();
 		int cursorX = 0;
 		int cursorY = 0;
 		std::string backgroundColor;
 		std::string foregroundColor;
 		for (int i = 0; i < backBuffer.size(); ++i)
 		{
+			// Clear the glyph if it wasn't drawn to this frame and incremental drawing is disabled
+			bool shouldUseClearGlyph = backBuffer[i].lastDrawnId != m_currentPresentId && !m_enableIncrementalDrawing;
+			if (shouldUseClearGlyph)
+			{
+				backBuffer[i] = clearGlyph;
+			}
+
 			const auto& backGlyph = backBuffer[i];
 			const auto& frontGlyph = frontBuffer[i];
 			if (backGlyph == frontGlyph && !m_shouldDrawAllGlyphs)
@@ -156,44 +152,50 @@ namespace console
 			const int y = i / m_sizeX + 1;
 			if (cursorX != x || cursorY != y || i == 0)
 			{
-				std::string setCursorPosition = vt::cursor::SetPosition(x, y);
-				builder += std::u8string{ setCursorPosition.cbegin(), setCursorPosition.cend() };
+				m_builder += vt::cursor::SetPosition(x, y);
 				cursorX = x;
 				cursorY = y;
 			}
 
 			if (foregroundColor != backGlyph.foregroundColor || i == 0)
 			{
-				builder += std::u8string{ backGlyph.foregroundColor.cbegin(), backGlyph.foregroundColor.cend() };
+				m_builder += backGlyph.foregroundColor;
 				foregroundColor = backGlyph.foregroundColor;
 			}
 
 			if (backgroundColor != backGlyph.backgroundColor || i == 0)
 			{
-				builder += std::u8string{ backGlyph.backgroundColor.cbegin(), backGlyph.backgroundColor.cend() };
+				m_builder += backGlyph.backgroundColor;
 				backgroundColor = backGlyph.backgroundColor;
 			}
 
-			builder += backGlyph.character;
+			for (char8_t c : backGlyph.character)
+			{
+				// Character may have multiple UTF-8 code points
+				m_builder += c;
+			}
+
 			if (++cursorX > m_sizeX)
 			{
 				++cursorY;
 				cursorX = 1;
 			}
 		}
-		m_shouldDrawAllGlyphs = false;
 
-		// Flush to make sure the console actually updates
-		if (!builder.empty())
+		m_shouldDrawAllGlyphs = false;
+		++m_currentPresentId;
+
+		// Push changes to cout
+		if (!m_builder.empty())
 		{
-			std::cout << std::string(builder.cbegin(), builder.cend()) << vt::cursor::HideCursor;
-			std::cout.flush();
+			m_builder += vt::cursor::HideCursor;
+			std::cout << m_builder;
 		}
 
 		if (m_enableIncrementalDrawing)
 		{
-			// Copy the front buffer to the back buffer if incremental drawing is enabled
-			backBuffer = frontBuffer;
+			// Copy the presented buffer if incremental drawing is enabled
+			frontBuffer = backBuffer;
 		}
 
 		// Flip the buffers for next frame

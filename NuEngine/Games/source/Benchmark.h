@@ -38,6 +38,9 @@ private:
 	std::vector<std::pair<char, uint8_t>> m_noise;
 	std::vector<std::pair<char, uint8_t>> m_noiseOriginal;
 
+	uint16_t m_width = 0;
+	uint16_t m_height = 0;
+
 	struct PhaseConfig
 	{
 		uint8_t changePercent = 10;
