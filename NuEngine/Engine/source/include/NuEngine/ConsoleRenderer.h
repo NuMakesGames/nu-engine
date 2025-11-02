@@ -4,6 +4,7 @@
 #include <string>
 #include <vector>
 
+#include "NuEngine/Assertions.h"
 #include "NuEngine/Console.h"
 #include "NuEngine/VirtualTerminalSequences.h"
 
@@ -34,6 +35,20 @@ namespace console
 			char character,
 			std::string_view foregroundColor = vt::color::ForegroundWhite,
 			std::string_view backgroundColor = vt::color::BackgroundBlack);
+
+		// Draws a character to the provided position
+		template<typename T, typename U = T>
+		bool DrawChar(
+			T x,
+			U y,
+			char character,
+			std::string_view foregroundColor = vt::color::ForegroundWhite,
+			std::string_view backgroundColor = vt::color::BackgroundBlack)
+		{
+			VerifyElseCrash(x >= 0 && x <= std::numeric_limits<uint16_t>::max());
+			VerifyElseCrash(y >= 0 && y<= std::numeric_limits<uint16_t>::max());
+			return DrawChar(static_cast<uint16_t>(x), static_cast<uint16_t>(y), character, foregroundColor, backgroundColor);
+		}
 
 		// Draws a character to the provided position
 		template<typename T>
@@ -73,6 +88,21 @@ namespace console
 
 		// Draws a UTF-8 character to the provided position
 		// NOTE: Assumes that the u8string represents exactly one character
+		template<typename T, typename U = T>
+		bool DrawU8Char(
+			T x,
+			U y,
+			std::u8string_view character,
+			std::string_view foregroundColor = vt::color::ForegroundWhite,
+			std::string_view backgroundColor = vt::color::BackgroundBlack)
+		{
+			VerifyElseCrash(x >= 0 && x <= std::numeric_limits<uint16_t>::max());
+			VerifyElseCrash(y >= 0 && y <= std::numeric_limits<uint16_t>::max());
+			return DrawU8Char(static_cast<uint16_t>(x), static_cast<uint16_t>(y), character, foregroundColor, backgroundColor);
+		}
+
+		// Draws a UTF-8 character to the provided position
+		// NOTE: Assumes that the u8string represents exactly one character
 		template<typename T>
 		bool DrawU8Char(
 			T&& position,
@@ -108,6 +138,21 @@ namespace console
 			std::string_view foregroundColor = vt::color::ForegroundWhite,
 			std::string_view backgroundColor = vt::color::BackgroundBlack);
 
+		// Draws a UTF-8 character to the provided position
+		// NOTE: Assumes that the u8string represents exactly one character
+		template<typename T, typename U = T>
+		bool DrawString(
+			T x,
+			U y,
+			std::string_view text,
+			std::string_view foregroundColor = vt::color::ForegroundWhite,
+			std::string_view backgroundColor = vt::color::BackgroundBlack)
+		{
+			VerifyElseCrash(x >= 0 && x <= std::numeric_limits<uint16_t>::max());
+			VerifyElseCrash(y >= 0 && y <= std::numeric_limits<uint16_t>::max());
+			return DrawString(static_cast<uint16_t>(x), static_cast<uint16_t>(y), text, foregroundColor, backgroundColor);
+		}
+
 		// Draws a string to the provided position
 		template<typename T>
 		bool DrawString(
@@ -142,6 +187,20 @@ namespace console
 			std::u8string_view text,
 			std::string_view foregroundColor = vt::color::ForegroundWhite,
 			std::string_view backgroundColor = vt::color::BackgroundBlack);
+
+		// Draws a UTF-8 string to the provided position
+		template<typename T, typename U = T>
+		bool DrawU8String(
+			T x,
+			U y,
+			std::u8string_view text,
+			std::string_view foregroundColor = vt::color::ForegroundWhite,
+			std::string_view backgroundColor = vt::color::BackgroundBlack)
+		{
+			VerifyElseCrash(x >= 0 && x <= std::numeric_limits<uint16_t>::max());
+			VerifyElseCrash(y >= 0 && y <= std::numeric_limits<uint16_t>::max());
+			return DrawU8String(static_cast<uint16_t>(x), static_cast<uint16_t>(y), text, foregroundColor, backgroundColor);
+		}
 
 		// Draws a UTF-8 string to the provided position
 		template<typename T>
